@@ -84,23 +84,23 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
       });
     }
 
-    // 3. Inverter to Load (from solar or battery)
-    const solarToLoad = Math.max(0, Math.min(solarKw - (batteryCharging ? Math.min(solarKw, batteryChargePower) : 0), loadKw));
-    const batteryToLoad = batteryDischarging ? Math.min(batteryKw, loadKw - solarToLoad) : 0;
-    const inverterToLoad = solarToLoad + batteryToLoad;
+    // 3. Inverter to Building (from solar or battery)
+    const solarToBuilding = Math.max(0, Math.min(solarKw - (batteryCharging ? Math.min(solarKw, batteryChargePower) : 0), loadKw));
+    const batteryToBuilding = batteryDischarging ? Math.min(batteryKw, loadKw - solarToBuilding) : 0;
+    const inverterToBuilding = solarToBuilding + batteryToBuilding;
     
-    if (inverterToLoad > threshold) {
+    if (inverterToBuilding > threshold) {
       flows.push({
         from: "inverter",
-        to: "load",
-        powerKw: inverterToLoad,
-        color: solarToLoad > batteryToLoad ? "rgb(251, 191, 36)" : "rgb(34, 197, 94)",
+        to: "building",
+        powerKw: inverterToBuilding,
+        color: solarToBuilding > batteryToBuilding ? "rgb(251, 191, 36)" : "rgb(34, 197, 94)",
       });
     }
 
     // 4. Inverter to Grid (excess solar or battery export)
-    const solarExcess = Math.max(0, solarKw - (batteryCharging ? Math.min(solarKw, batteryChargePower) : 0) - solarToLoad);
-    const batteryExport = batteryDischarging ? Math.max(0, batteryKw - batteryToLoad) : 0;
+    const solarExcess = Math.max(0, solarKw - (batteryCharging ? Math.min(solarKw, batteryChargePower) : 0) - solarToBuilding);
+    const batteryExport = batteryDischarging ? Math.max(0, batteryKw - batteryToBuilding) : 0;
     const inverterToGrid = solarExcess + batteryExport;
     
     if (inverterToGrid > threshold) {
@@ -112,16 +112,16 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
       });
     }
 
-    // 5. Grid to Load (when grid is importing and load needs more)
-    const gridToLoad = gridKw > threshold && loadKw > inverterToLoad + threshold
-      ? Math.min(gridKw, loadKw - inverterToLoad)
+    // 5. Grid to Building (when grid is importing and building needs more)
+    const gridToBuilding = gridKw > threshold && loadKw > inverterToBuilding + threshold
+      ? Math.min(gridKw, loadKw - inverterToBuilding)
       : 0;
     
-    if (gridToLoad > threshold) {
+    if (gridToBuilding > threshold) {
       flows.push({
         from: "grid",
-        to: "load",
-        powerKw: gridToLoad,
+        to: "building",
+        powerKw: gridToBuilding,
         color: "rgb(59, 130, 246)", // blue-500
       });
     }
@@ -139,10 +139,20 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
     building: { x: 400, y: 50 },
     grid: { x: 200, y: 200 },
     inverter: { x: 400, y: 200 },
-    load: { x: 600, y: 200 },
     solar: { x: 300, y: 350 },
     battery: { x: 500, y: 350 },
   };
+
+  // Define all possible static interconnections
+  const staticConnections = [
+    { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom" },
+    { from: "inverter", to: "battery", sideFrom: "bottom", sideTo: "top" },
+    { from: "battery", to: "inverter", sideFrom: "top", sideTo: "bottom" },
+    { from: "inverter", to: "building", sideFrom: "top", sideTo: "bottom" },
+    { from: "inverter", to: "grid", sideFrom: "left", sideTo: "right" },
+    { from: "grid", to: "building", sideFrom: "right", sideTo: "left" },
+    { from: "grid", to: "battery", sideFrom: "bottom", sideTo: "left" },
+  ];
 
   // Calculate connection points
   const getConnectionPoint = (node: string, side: "top" | "bottom" | "left" | "right") => {
@@ -183,7 +193,32 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
             </marker>
           </defs>
           
-          {/* Animated energy flow lines */}
+          {/* Static interconnection lines (always visible) */}
+          {staticConnections.map((conn, idx) => {
+            const fromPoint = getConnectionPoint(conn.from, conn.sideFrom);
+            const toPoint = getConnectionPoint(conn.to, conn.sideTo);
+            
+            // Check if there's an active flow on this connection
+            const hasActiveFlow = flows.some(
+              f => f.from === conn.from && f.to === conn.to
+            );
+            
+            return (
+              <line
+                key={`static-${conn.from}-${conn.to}-${idx}`}
+                x1={fromPoint.x}
+                y1={fromPoint.y}
+                x2={toPoint.x}
+                y2={toPoint.y}
+                stroke={hasActiveFlow ? "transparent" : "rgba(148, 163, 184, 0.2)"}
+                strokeWidth="1"
+                strokeDasharray="4,4"
+                strokeLinecap="round"
+              />
+            );
+          })}
+          
+          {/* Active energy flow lines */}
           {flows.map((flow, idx) => {
             let fromPoint, toPoint;
             
@@ -197,18 +232,18 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
             } else if (flow.from === "battery" && flow.to === "inverter") {
               fromPoint = getConnectionPoint("battery", "top");
               toPoint = getConnectionPoint("inverter", "bottom");
-            } else if (flow.from === "inverter" && flow.to === "load") {
-              fromPoint = getConnectionPoint("inverter", "right");
-              toPoint = getConnectionPoint("load", "left");
+            } else if (flow.from === "inverter" && flow.to === "building") {
+              fromPoint = getConnectionPoint("inverter", "top");
+              toPoint = getConnectionPoint("building", "bottom");
             } else if (flow.from === "inverter" && flow.to === "grid") {
               fromPoint = getConnectionPoint("inverter", "left");
               toPoint = getConnectionPoint("grid", "right");
             } else if (flow.from === "grid" && flow.to === "battery") {
               fromPoint = getConnectionPoint("grid", "bottom");
               toPoint = getConnectionPoint("battery", "left");
-            } else if (flow.from === "grid" && flow.to === "load") {
+            } else if (flow.from === "grid" && flow.to === "building") {
               fromPoint = getConnectionPoint("grid", "right");
-              toPoint = getConnectionPoint("load", "left");
+              toPoint = getConnectionPoint("building", "left");
             } else {
               return null;
             }
@@ -234,25 +269,10 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
                   strokeWidth={strokeWidth}
                   strokeLinecap="round"
                   markerEnd="url(#arrowhead)"
-                  className="animate-pulse"
                   style={{
                     filter: `drop-shadow(0 0 4px ${flow.color})`,
                   }}
                 />
-                {/* Animated dot moving along the line */}
-                <circle
-                  r="4"
-                  fill={flow.color}
-                  style={{
-                    filter: `drop-shadow(0 0 6px ${flow.color})`,
-                  }}
-                >
-                  <animateMotion
-                    dur="2s"
-                    repeatCount="indefinite"
-                    path={`M ${fromPoint.x} ${fromPoint.y} L ${toPoint.x} ${toPoint.y}`}
-                  />
-                </circle>
               </g>
             );
           })}
@@ -270,7 +290,8 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           }}
         >
           <div className="text-3xl mb-1">🏢</div>
-          <div className="text-xs font-semibold text-slate-300">Building</div>
+          <div className="text-xs font-semibold text-slate-300 mb-1">Building Load</div>
+          <div className="text-sm font-mono text-slate-300">{loadKw.toFixed(1)} kW</div>
         </div>
 
         {/* Grid */}
@@ -304,20 +325,6 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
         >
           <div className="text-lg font-semibold text-slate-300 mb-1">INVERTER</div>
           <div className="text-xs text-slate-400">DC ↔ AC</div>
-        </div>
-
-        {/* Load */}
-        <div
-          className="absolute bg-orange-900/40 rounded-lg p-3 border-2 border-orange-500/50 flex flex-col items-center justify-center"
-          style={{
-            left: positions.load.x - boxWidth / 2,
-            top: positions.load.y - boxHeight / 2,
-            width: boxWidth,
-            height: boxHeight,
-          }}
-        >
-          <div className="text-lg font-semibold text-orange-300 mb-1">LOAD</div>
-          <div className="text-sm font-mono text-orange-300">{loadKw.toFixed(1)} kW</div>
         </div>
 
         {/* Solar */}
