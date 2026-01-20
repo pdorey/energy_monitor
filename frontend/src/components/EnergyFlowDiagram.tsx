@@ -211,7 +211,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
   };
 
   // Create right-angled path
-  const createRightAnglePath = (from: { x: number; y: number }, to: { x: number; y: number }, fromSide: Side, toSide: Side): string => {
+  const createRightAnglePath = (from: { x: number; y: number }, to: { x: number; y: number }, fromSide: Side): string => {
     // Determine intermediate point for right angle
     let midX = from.x;
     let midY = from.y;
@@ -242,7 +242,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           {staticConnections.map((conn, idx) => {
             const fromPoint = getConnectionPoint(conn.from, conn.sideFrom);
             const toPoint = getConnectionPoint(conn.to, conn.sideTo);
-            const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo);
+            const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom);
             
             // Check if there's an active flow on this connection
             const hasActiveFlow = flows.some(
@@ -316,7 +316,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
               return null;
             }
 
-            const path = createRightAnglePath(fromPoint, toPoint, fromSide, toSide);
+            const path = createRightAnglePath(fromPoint, toPoint, fromSide);
             // Use color of the "to" component
             const flowColor = getComponentColor(flow.to);
 
