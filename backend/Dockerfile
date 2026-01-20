@@ -9,8 +9,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
-# frontend_dist will be mounted / copied at build-time later
-COPY ../frontend_dist ./frontend_dist 2>/dev/null || true
+
+# Copy built frontend assets.
+# Note: the Docker build context must include the repository root
+# (e.g. `context: .` in docker-compose) so that `frontend_dist/` is visible.
+COPY frontend_dist ./frontend_dist
 
 EXPOSE 8000
 
