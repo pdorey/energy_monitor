@@ -144,7 +144,13 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
   };
 
   // Define all possible static interconnections
-  const staticConnections = [
+  type Side = "top" | "bottom" | "left" | "right";
+  const staticConnections: Array<{
+    from: string;
+    to: string;
+    sideFrom: Side;
+    sideTo: Side;
+  }> = [
     { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom" },
     { from: "inverter", to: "battery", sideFrom: "bottom", sideTo: "top" },
     { from: "battery", to: "inverter", sideFrom: "top", sideTo: "bottom" },
