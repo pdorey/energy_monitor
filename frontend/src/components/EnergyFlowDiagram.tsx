@@ -354,8 +354,8 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           {/* Active energy flow lines (colored based on source) */}
           {flows.map((flow, idx) => {
             let fromPoint, toPoint, fromSide: Side, toSide: Side;
-            let offsetFrom: Offset = "center";
-            let offsetTo: Offset = "center";
+            //let offsetFrom: Offset = "center";
+            //let offsetTo: Offset = "center";
             
             // Determine connection points based on flow direction
             // Use 40%/60% offsets for vertical connections
