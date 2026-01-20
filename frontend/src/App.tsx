@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchJSON } from "./api/client";
 import { useLiveData } from "./hooks/useLiveData";
+import { EnergyFlowDiagram } from "./components/EnergyFlowDiagram";
 
 interface Overview {
   timestamp: string;
@@ -54,8 +55,9 @@ export function App() {
   }, []);
 
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
-  //const gridKw = snapshot?.grid.power_w ? snapshot.grid.power_w / 1000 : overview?.grid_kw ?? 0;
-  //const loadKw = snapshot?.load.power_w ? snapshot.load.power_w / 1000 : overview?.load_kw ?? 0;
+  const gridKw = snapshot?.grid.power_w ? snapshot.grid.power_w / 1000 : overview?.grid_kw ?? 0;
+  const loadKw = snapshot?.load.power_w ? snapshot.load.power_w / 1000 : overview?.load_kw ?? 0;
+  const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
   const soc = snapshot?.battery.soc_percent ?? overview?.battery_soc_percent ?? 0;
 
   return (
@@ -91,32 +93,47 @@ export function App() {
         {loading && <div className="text-slate-400">Loading...</div>}
 
         {!loading && tab === "overview" && (
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="bg-slate-800/60 rounded-lg p-4">
-              <div className="text-xs uppercase text-slate-400">Equipment</div>
-              <div className="mt-2 text-3xl font-semibold">
-                {overview?.online_equipment ?? 0}/{overview?.total_equipment ?? 0}
+          <div className="space-y-6">
+            {/* Stats row */}
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="bg-slate-800/60 rounded-lg p-4">
+                <div className="text-xs uppercase text-slate-400">Equipment</div>
+                <div className="mt-2 text-3xl font-semibold">
+                  {overview?.online_equipment ?? 0}/{overview?.total_equipment ?? 0}
+                </div>
+                <div className="text-sm text-slate-400 mt-1">Online</div>
               </div>
-              <div className="text-sm text-slate-400 mt-1">Online</div>
-            </div>
-            <div className="bg-slate-800/60 rounded-lg p-4">
-              <div className="text-xs uppercase text-slate-400">Uptime</div>
-              <div className="mt-2 text-3xl font-semibold">
-                {overview ? formatHours(overview.uptime_seconds) : "0h"}
+              <div className="bg-slate-800/60 rounded-lg p-4">
+                <div className="text-xs uppercase text-slate-400">Uptime</div>
+                <div className="mt-2 text-3xl font-semibold">
+                  {overview ? formatHours(overview.uptime_seconds) : "0h"}
+                </div>
+              </div>
+              <div className="bg-slate-800/60 rounded-lg p-4">
+                <div className="text-xs uppercase text-slate-400">Solar</div>
+                <div className="mt-2 text-3xl font-semibold text-amber-300">
+                  {solarKw.toFixed(1)} <span className="text-sm">kW</span>
+                </div>
+              </div>
+              <div className="bg-slate-800/60 rounded-lg p-4">
+                <div className="text-xs uppercase text-slate-400">Battery</div>
+                <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                  {soc.toFixed(0)} <span className="text-sm">%</span>
+                </div>
               </div>
             </div>
-            <div className="bg-slate-800/60 rounded-lg p-4">
-              <div className="text-xs uppercase text-slate-400">Solar</div>
-              <div className="mt-2 text-3xl font-semibold text-amber-300">
-                {solarKw.toFixed(1)} <span className="text-sm">kW</span>
-              </div>
-            </div>
-            <div className="bg-slate-800/60 rounded-lg p-4">
-              <div className="text-xs uppercase text-slate-400">Battery</div>
-              <div className="mt-2 text-3xl font-semibold text-emerald-300">
-                {soc.toFixed(0)} <span className="text-sm">%</span>
-              </div>
-            </div>
+
+            {/* Energy Flow Diagram */}
+            <EnergyFlowDiagram
+              snapshot={snapshot}
+              overview={overview ? {
+                solar_kw: overview.solar_kw,
+                battery_kw: overview.battery_kw,
+                grid_kw: overview.grid_kw,
+                load_kw: overview.load_kw,
+                battery_soc_percent: overview.battery_soc_percent,
+              } : null}
+            />
           </div>
         )}
 
