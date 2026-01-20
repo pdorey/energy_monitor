@@ -74,6 +74,33 @@ docker-compose up -d --build
 
 Access the dashboard at: **http://your-pi-ip:8000**
 
+### Deployment Script
+
+For easy updates and redeployment on Raspberry Pi, use the provided deployment script:
+
+```bash
+# Make the script executable (first time only)
+chmod +x deploy.sh
+
+# Run the deployment script
+./deploy.sh
+```
+
+The script will:
+1. Pull the latest code from git
+2. Install/update npm dependencies (if needed)
+3. Build the frontend
+4. Stop existing containers
+5. Rebuild and start Docker containers
+6. Perform health checks
+7. Display status and logs
+
+**Note:** Ensure you have:
+- Git repository initialized and connected to remote
+- Node.js and npm installed (for frontend build)
+- Docker and docker-compose installed
+- Proper permissions to run docker commands
+
 ## Architecture
 
 This is a simplified architecture optimized for demo purposes:

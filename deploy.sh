@@ -3,7 +3,14 @@
 # Energy Monitor Deployment Script for Raspberry Pi
 # This script pulls latest code, rebuilds frontend, and redeploys Docker containers
 
-set -e  # Exit on any error
+# Don't use set -e, we want to handle errors gracefully
+set +e
+
+# Print header
+echo "=========================================="
+echo "  Energy Monitor Deployment Script"
+echo "=========================================="
+echo ""
 
 # Colors for output
 RED='\033[0;31m'
@@ -44,16 +51,41 @@ fi
 
 # Step 1: Pull latest code
 print_status "Step 1: Pulling latest code from git..."
-if git pull; then
-    print_success "Code updated successfully"
+GIT_PULL_OUTPUT=$(git pull 2>&1)
+GIT_PULL_EXIT=$?
+
+if [ $GIT_PULL_EXIT -eq 0 ]; then
+    if echo "$GIT_PULL_OUTPUT" | grep -q "Already up to date"; then
+        print_success "Code is already up to date"
+    else
+        print_success "Code updated successfully"
+    fi
 else
-    print_error "Failed to pull latest code"
-    exit 1
+    print_warning "Git pull had issues, but continuing with deployment..."
+    print_warning "Output: $GIT_PULL_OUTPUT"
 fi
 
 # Step 2: Check if frontend directory exists
 if [ ! -d "frontend" ]; then
     print_error "Frontend directory not found!"
+    exit 1
+fi
+
+# Check if Node.js is installed
+if ! command -v node &> /dev/null; then
+    print_error "Node.js is not installed. Please install Node.js first."
+    exit 1
+fi
+
+# Check if npm is installed
+if ! command -v npm &> /dev/null; then
+    print_error "npm is not installed. Please install npm first."
+    exit 1
+fi
+
+# Check if docker-compose is available
+if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+    print_error "docker-compose is not installed. Please install Docker Compose first."
     exit 1
 fi
 
@@ -92,7 +124,14 @@ print_success "Frontend build artifacts ready"
 
 # Step 5: Stop existing containers
 print_status "Step 3: Stopping existing containers..."
-if docker-compose down; then
+# Try docker-compose first, fall back to docker compose (newer syntax)
+if command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+else
+    DOCKER_COMPOSE_CMD="docker compose"
+fi
+
+if $DOCKER_COMPOSE_CMD down; then
     print_success "Containers stopped"
 else
     print_warning "Some containers may not have been running"
@@ -100,7 +139,7 @@ fi
 
 # Step 6: Rebuild and start containers
 print_status "Step 4: Rebuilding and starting Docker containers..."
-if docker-compose up -d --build; then
+if $DOCKER_COMPOSE_CMD up -d --build; then
     print_success "Containers rebuilt and started successfully"
 else
     print_error "Failed to rebuild/start containers"
@@ -113,7 +152,7 @@ sleep 5
 
 # Step 8: Check container status
 print_status "Step 5: Checking container status..."
-if docker-compose ps; then
+if $DOCKER_COMPOSE_CMD ps; then
     print_success "Container status check complete"
 else
     print_warning "Could not get container status"
@@ -121,7 +160,7 @@ fi
 
 # Step 9: Show recent logs
 print_status "Step 6: Recent container logs:"
-docker-compose logs --tail=20
+$DOCKER_COMPOSE_CMD logs --tail=20
 
 # Step 10: Health check
 print_status "Step 7: Performing health check..."
@@ -135,6 +174,6 @@ else
 fi
 
 print_success "Deployment complete!"
-print_status "To view logs: docker-compose logs -f"
-print_status "To stop: docker-compose down"
-print_status "To restart: docker-compose restart"
+print_status "To view logs: $DOCKER_COMPOSE_CMD logs -f"
+print_status "To stop: $DOCKER_COMPOSE_CMD down"
+print_status "To restart: $DOCKER_COMPOSE_CMD restart"
