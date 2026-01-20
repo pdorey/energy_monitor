@@ -132,7 +132,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
   // Component box dimensions and positions
   const boxWidth = 140;
   const boxHeight = 100;
-  const spacing = 180;
+  //const spacing = 180;
 
   // Tree layout positions (centered)
   const positions = {
