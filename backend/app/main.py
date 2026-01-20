@@ -46,7 +46,7 @@ app.add_middleware(
 
 # static SPA (built frontend)
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "..", "frontend_dist")
+STATIC_DIR = os.path.join(BASE_DIR, "frontend_dist")
 if os.path.isdir(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
