@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Set
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -48,7 +48,11 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "frontend_dist")
 if os.path.isdir(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    # Mount static files directory - this will serve assets, images, etc.
+    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
+    # Serve other static files (like vite.svg) from root of frontend_dist
+    static_files = StaticFiles(directory=STATIC_DIR)
+    app.mount("/static", static_files, name="static")
 
 
 @app.get("/")
@@ -135,6 +139,28 @@ async def broadcast_loop():
             except Exception:
                 dead.add(ws)
         clients.difference_update(dead)
+
+
+# Catch-all route for SPA routing - must be last
+# This handles static files at root (like vite.svg) and SPA routes
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    # Don't interfere with API routes or WebSocket (these are handled by their specific routes)
+    if full_path.startswith("api/") or full_path.startswith("ws/"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404)
+    
+    # Try to serve the requested file if it exists (e.g., vite.svg)
+    file_path = os.path.join(STATIC_DIR, full_path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    # Otherwise serve index.html for SPA routing
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
+    return {"message": "Frontend not built yet. Run frontend build."}
 
 
 if __name__ == "__main__":
