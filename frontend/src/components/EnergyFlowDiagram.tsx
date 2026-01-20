@@ -264,54 +264,45 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           
           {/* Active energy flow lines (right-angled) */}
           {flows.map((flow, idx) => {
-            let fromPoint, toPoint, fromSide: Side, toSide: Side;
+            let fromPoint, toPoint, fromSide: Side;
             
             // Determine connection points based on flow direction
             if (flow.from === "solar" && flow.to === "inverter") {
               fromPoint = getConnectionPoint("solar", "top");
               toPoint = getConnectionPoint("inverter", "bottom");
               fromSide = "top";
-              toSide = "bottom";
             } else if (flow.from === "inverter" && flow.to === "battery") {
               fromPoint = getConnectionPoint("inverter", "bottom");
               toPoint = getConnectionPoint("battery", "top");
               fromSide = "bottom";
-              toSide = "top";
             } else if (flow.from === "battery" && flow.to === "inverter") {
               fromPoint = getConnectionPoint("battery", "top");
               toPoint = getConnectionPoint("inverter", "bottom");
               fromSide = "top";
-              toSide = "bottom";
             } else if (flow.from === "inverter" && flow.to === "building") {
               fromPoint = getConnectionPoint("inverter", "top");
               toPoint = getConnectionPoint("building", "bottom");
               fromSide = "top";
-              toSide = "bottom";
             } else if (flow.from === "inverter" && flow.to === "gridMeter") {
               fromPoint = getConnectionPoint("inverter", "left");
               toPoint = getConnectionPoint("gridMeter", "right");
               fromSide = "left";
-              toSide = "right";
             } else if (flow.from === "gridMeter" && flow.to === "grid") {
               fromPoint = getConnectionPoint("gridMeter", "left");
               toPoint = getConnectionPoint("grid", "right");
               fromSide = "left";
-              toSide = "right";
             } else if (flow.from === "grid" && flow.to === "gridMeter") {
               fromPoint = getConnectionPoint("grid", "right");
               toPoint = getConnectionPoint("gridMeter", "left");
               fromSide = "right";
-              toSide = "left";
             } else if (flow.from === "gridMeter" && flow.to === "building") {
               fromPoint = getConnectionPoint("gridMeter", "top");
               toPoint = getConnectionPoint("building", "left");
               fromSide = "top";
-              toSide = "left";
             } else if (flow.from === "gridMeter" && flow.to === "battery") {
               fromPoint = getConnectionPoint("gridMeter", "bottom");
               toPoint = getConnectionPoint("battery", "left");
               fromSide = "bottom";
-              toSide = "left";
             } else {
               return null;
             }
