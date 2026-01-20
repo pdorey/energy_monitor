@@ -19,14 +19,28 @@ interface EnergyFlow {
   color: string;
 }
 
-// Component theme colors
-const componentColors = {
-  grid: "rgb(59, 130, 246)", // blue-500
-  gridMeter: "rgb(239, 68, 68)", // red-500
-  building: "rgb(148, 163, 184)", // slate-400
-  inverter: "rgb(148, 163, 184)", // slate-400
-  solar: "rgb(251, 191, 36)", // amber-400
-  battery: "rgb(34, 197, 94)", // emerald-500
+// Flow path colors (matching PowerPoint diagram)
+const flowPathColors = {
+  // Blue: Grid to Grid Meter (importing)
+  gridToGridMeter: "rgb(59, 130, 246)", // blue-500
+  
+  // Orange: Solar to Inverter, Grid Meter to Inverter, Inverter to Building
+  solarToInverter: "rgb(251, 191, 36)", // amber-400
+  gridMeterToInverter: "rgb(251, 191, 36)", // amber-400
+  inverterToBuilding: "rgb(251, 191, 36)", // amber-400
+  
+  // Green: Inverter to Battery (charging)
+  inverterToBattery: "rgb(34, 197, 94)", // emerald-500
+  
+  // Red: Grid Meter to Building, Battery to Inverter (discharging)
+  gridMeterToBuilding: "rgb(239, 68, 68)", // red-500
+  batteryToInverter: "rgb(239, 68, 68)", // red-500
+  
+  // Red: Grid Meter to Grid (exporting)
+  gridMeterToGrid: "rgb(239, 68, 68)", // red-500
+  
+  // Green: Grid Meter to Battery (charging from grid)
+  gridMeterToBattery: "rgb(34, 197, 94)", // emerald-500
 };
 
 export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps) {
@@ -50,49 +64,50 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
     const gridImporting = gridKw > threshold;
     const gridExporting = gridKw < -threshold;
 
-    // 1. Solar to Inverter
+    // 1. Solar to Inverter (Orange)
     if (solarKw > threshold) {
       flows.push({
         from: "solar",
         to: "inverter",
         powerKw: solarKw,
-        color: componentColors.solar,
+        color: flowPathColors.solarToInverter,
       });
     }
 
     // 2. Battery flows
     if (batteryCharging) {
-      // Battery charging from inverter (solar)
+      // Battery charging from inverter (solar) - Green
       if (solarKw > threshold) {
         const solarForBattery = Math.min(solarKw, batteryChargePower);
         flows.push({
           from: "inverter",
           to: "battery",
           powerKw: solarForBattery,
-          color: componentColors.battery,
+          color: flowPathColors.inverterToBattery,
         });
       }
       
-      // Battery charging from grid (via grid meter)
+      // Battery charging from grid (via grid meter) - Green
       if (batteryChargePower > solarKw && gridImporting) {
         const gridForBattery = Math.min(gridKw, batteryChargePower - solarKw);
         flows.push({
           from: "gridMeter",
           to: "battery",
           powerKw: gridForBattery,
-          color: componentColors.battery,
+          color: flowPathColors.gridMeterToBattery,
         });
       }
     } else if (batteryDischarging) {
+      // Battery discharging to inverter - Red
       flows.push({
         from: "battery",
         to: "inverter",
         powerKw: batteryKw,
-        color: componentColors.inverter,
+        color: flowPathColors.batteryToInverter,
       });
     }
 
-    // 3. Inverter to Building
+    // 3. Inverter to Building (Orange)
     const solarToBuilding = Math.max(0, Math.min(solarKw - (batteryCharging ? Math.min(solarKw, batteryChargePower) : 0), loadKw));
     const batteryToBuilding = batteryDischarging ? Math.min(batteryKw, loadKw - solarToBuilding) : 0;
     const inverterToBuilding = solarToBuilding + batteryToBuilding;
@@ -102,11 +117,11 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
         from: "inverter",
         to: "building",
         powerKw: inverterToBuilding,
-        color: componentColors.building,
+        color: flowPathColors.inverterToBuilding,
       });
     }
 
-    // 4. Inverter to Grid Meter (for export)
+    // 4. Inverter to Grid Meter (for export) - Orange
     const solarExcess = Math.max(0, solarKw - (batteryCharging ? Math.min(solarKw, batteryChargePower) : 0) - solarToBuilding);
     const batteryExport = batteryDischarging ? Math.max(0, batteryKw - batteryToBuilding) : 0;
     const inverterToGrid = solarExcess + batteryExport;
@@ -116,31 +131,31 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
         from: "inverter",
         to: "gridMeter",
         powerKw: inverterToGrid,
-        color: componentColors.gridMeter,
+        color: flowPathColors.gridMeterToInverter, // Orange (reverse direction)
       });
     }
 
-    // 5. Grid Meter to Grid (exporting)
+    // 5. Grid Meter to Grid (exporting) - Red
     if (gridExporting) {
       flows.push({
         from: "gridMeter",
         to: "grid",
         powerKw: Math.abs(gridKw),
-        color: componentColors.grid,
+        color: flowPathColors.gridMeterToGrid,
       });
     }
 
-    // 6. Grid to Grid Meter (importing)
+    // 6. Grid to Grid Meter (importing) - Blue
     if (gridImporting) {
       flows.push({
         from: "grid",
         to: "gridMeter",
         powerKw: gridKw,
-        color: componentColors.gridMeter,
+        color: flowPathColors.gridToGridMeter,
       });
     }
 
-    // 7. Grid Meter to Building (when importing)
+    // 7. Grid Meter to Building (when importing) - Red
     const gridToBuilding = gridImporting && loadKw > inverterToBuilding + threshold
       ? Math.min(gridKw, loadKw - inverterToBuilding)
       : 0;
@@ -150,8 +165,21 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
         from: "gridMeter",
         to: "building",
         powerKw: gridToBuilding,
-        color: componentColors.building,
+        color: flowPathColors.gridMeterToBuilding,
       });
+    }
+    
+    // 8. Grid Meter to Inverter (when importing and inverter needs power) - Orange
+    if (gridImporting && inverterToBuilding < loadKw - threshold) {
+      const gridMeterToInverterFlow = Math.min(gridKw - gridToBuilding, loadKw - inverterToBuilding);
+      if (gridMeterToInverterFlow > threshold) {
+        flows.push({
+          from: "gridMeter",
+          to: "inverter",
+          powerKw: gridMeterToInverterFlow,
+          color: flowPathColors.gridMeterToInverter,
+        });
+      }
     }
 
     return flows;
@@ -172,6 +200,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
   };
 
   // Define all possible static interconnections with right-angled paths
+  // Matching PowerPoint diagram layout
   type Side = "top" | "bottom" | "left" | "right";
   const staticConnections: Array<{
     from: string;
@@ -180,10 +209,11 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
     sideTo: Side;
   }> = [
     { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom" },
-    { from: "inverter", to: "battery", sideFrom: "bottom", sideTo: "top" },
-    { from: "battery", to: "inverter", sideFrom: "top", sideTo: "bottom" },
-    { from: "inverter", to: "building", sideFrom: "top", sideTo: "bottom" },
+    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left" },
+    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right" },
+    { from: "inverter", to: "building", sideFrom: "top", sideTo: "right" },
     { from: "inverter", to: "gridMeter", sideFrom: "left", sideTo: "right" },
+    { from: "gridMeter", to: "inverter", sideFrom: "right", sideTo: "left" },
     { from: "gridMeter", to: "grid", sideFrom: "left", sideTo: "right" },
     { from: "grid", to: "gridMeter", sideFrom: "right", sideTo: "left" },
     { from: "gridMeter", to: "building", sideFrom: "top", sideTo: "left" },
@@ -211,27 +241,31 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
   };
 
   // Create right-angled path
-  const createRightAnglePath = (from: { x: number; y: number }, to: { x: number; y: number }, fromSide: Side): string => {
+  const createRightAnglePath = (from: { x: number; y: number }, to: { x: number; y: number }, fromSide: Side, toSide?: Side): string => {
     // Determine intermediate point for right angle
     let midX = from.x;
     let midY = from.y;
 
-    // Horizontal then vertical
-    if (fromSide === "left" || fromSide === "right") {
+    // For vertical connections (top/bottom), go horizontal then vertical
+    if (fromSide === "top" || fromSide === "bottom") {
+      // If going to left/right side, go horizontal first
+      if (toSide === "left" || toSide === "right") {
+        midX = to.x;
+        midY = from.y;
+      } else {
+        // Otherwise go vertical first
+        midX = from.x;
+        midY = (from.y + to.y) / 2;
+      }
+    } else {
+      // For horizontal connections (left/right), go horizontal then vertical
       midX = (from.x + to.x) / 2;
       midY = from.y;
-    } else {
-      midX = from.x;
-      midY = (from.y + to.y) / 2;
     }
 
     return `M ${from.x} ${from.y} L ${midX} ${midY} L ${to.x} ${to.y}`;
   };
 
-  // Get color for component
-  const getComponentColor = (component: string): string => {
-    return componentColors[component as keyof typeof componentColors] || componentColors.inverter;
-  };
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-6 overflow-x-auto">
@@ -242,7 +276,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           {staticConnections.map((conn, idx) => {
             const fromPoint = getConnectionPoint(conn.from, conn.sideFrom);
             const toPoint = getConnectionPoint(conn.to, conn.sideTo);
-            const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom);
+            const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo);
             
             // Check if there's an active flow on this connection
             const hasActiveFlow = flows.some(
@@ -264,52 +298,66 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           
           {/* Active energy flow lines (right-angled) */}
           {flows.map((flow, idx) => {
-            let fromPoint, toPoint, fromSide: Side;
+            let fromPoint, toPoint, fromSide: Side, toSide: Side;
             
             // Determine connection points based on flow direction
             if (flow.from === "solar" && flow.to === "inverter") {
               fromPoint = getConnectionPoint("solar", "top");
               toPoint = getConnectionPoint("inverter", "bottom");
               fromSide = "top";
+              toSide = "bottom";
             } else if (flow.from === "inverter" && flow.to === "battery") {
-              fromPoint = getConnectionPoint("inverter", "bottom");
-              toPoint = getConnectionPoint("battery", "top");
-              fromSide = "bottom";
+              fromPoint = getConnectionPoint("inverter", "right");
+              toPoint = getConnectionPoint("battery", "left");
+              fromSide = "right";
+              toSide = "left";
             } else if (flow.from === "battery" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("battery", "top");
-              toPoint = getConnectionPoint("inverter", "bottom");
-              fromSide = "top";
+              fromPoint = getConnectionPoint("battery", "left");
+              toPoint = getConnectionPoint("inverter", "right");
+              fromSide = "left";
+              toSide = "right";
             } else if (flow.from === "inverter" && flow.to === "building") {
               fromPoint = getConnectionPoint("inverter", "top");
-              toPoint = getConnectionPoint("building", "bottom");
+              toPoint = getConnectionPoint("building", "right");
               fromSide = "top";
+              toSide = "right";
             } else if (flow.from === "inverter" && flow.to === "gridMeter") {
               fromPoint = getConnectionPoint("inverter", "left");
               toPoint = getConnectionPoint("gridMeter", "right");
               fromSide = "left";
+              toSide = "right";
+            } else if (flow.from === "gridMeter" && flow.to === "inverter") {
+              fromPoint = getConnectionPoint("gridMeter", "right");
+              toPoint = getConnectionPoint("inverter", "left");
+              fromSide = "right";
+              toSide = "left";
             } else if (flow.from === "gridMeter" && flow.to === "grid") {
               fromPoint = getConnectionPoint("gridMeter", "left");
               toPoint = getConnectionPoint("grid", "right");
               fromSide = "left";
+              toSide = "right";
             } else if (flow.from === "grid" && flow.to === "gridMeter") {
               fromPoint = getConnectionPoint("grid", "right");
               toPoint = getConnectionPoint("gridMeter", "left");
               fromSide = "right";
+              toSide = "left";
             } else if (flow.from === "gridMeter" && flow.to === "building") {
               fromPoint = getConnectionPoint("gridMeter", "top");
               toPoint = getConnectionPoint("building", "left");
               fromSide = "top";
+              toSide = "left";
             } else if (flow.from === "gridMeter" && flow.to === "battery") {
               fromPoint = getConnectionPoint("gridMeter", "bottom");
               toPoint = getConnectionPoint("battery", "left");
               fromSide = "bottom";
+              toSide = "left";
             } else {
               return null;
             }
 
-            const path = createRightAnglePath(fromPoint, toPoint, fromSide);
-            // Use color of the "to" component
-            const flowColor = getComponentColor(flow.to);
+            const path = createRightAnglePath(fromPoint, toPoint, fromSide, toSide);
+            // Use color from flow definition (matches PowerPoint diagram)
+            const flowColor = flow.color;
 
             return (
               <g key={`${flow.from}-${flow.to}-${idx}`}>

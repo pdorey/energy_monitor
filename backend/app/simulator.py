@@ -38,8 +38,11 @@ class Simulator:
 
     def __init__(self, history_hours: int = 24, step_seconds: int = 2) -> None:
         self.battery_soc = 60.0
-        self.last_update = datetime.now(timezone.utc)
+        self.start_time = datetime.now(timezone.utc)
+        self.last_update = self.start_time
         self.step_seconds = step_seconds
+        # Compress 24 hours into 2 minutes: 24 * 3600 / 120 = 720x speedup
+        self.time_compression = 720.0
 
         max_points = int(history_hours * 3600 / step_seconds)
         self.history: Dict[str, Deque[TimeseriesPoint]] = {
@@ -55,34 +58,46 @@ class Simulator:
     def _is_january(dt: datetime) -> bool:
         return dt.month == 1
 
-    @staticmethod
-    def _pv_profile_w(t: datetime, peak_jan: float, peak_jun: float) -> float:
-        hour = t.hour + t.minute / 60.0
-        if hour < 8 or hour > 18:
+    def _pv_profile_w(self, t: datetime, peak_jan: float, peak_jun: float) -> float:
+        # Calculate simulated hour (0-23) based on elapsed time since start
+        elapsed_seconds = (t - self.start_time).total_seconds()
+        simulated_hour = (elapsed_seconds * self.time_compression / 3600.0) % 24.0
+        
+        # Solar production: sunrise around 6am, sunset around 7pm
+        if simulated_hour < 6 or simulated_hour > 19:
             return 0.0
 
         peak = peak_jan if t.month in (11, 12, 1, 2) else peak_jun
-        x = (hour - 8) / 10.0 * math.pi
+        # Smooth curve from sunrise to sunset
+        x = (simulated_hour - 6) / 13.0 * math.pi
         bell = max(0.0, math.sin(x))
         return peak * bell
 
     def _office_load_profile_w(self, t: datetime) -> float:
-        hour = t.hour + t.minute / 60.0
+        # Calculate simulated hour (0-23) based on elapsed time since start
+        elapsed_seconds = (t - self.start_time).total_seconds()
+        simulated_hour = (elapsed_seconds * self.time_compression / 3600.0) % 24.0
+        
         base = self.OFFICE_BASE_LOAD_W
         peak = self.OFFICE_PEAK_LOAD_W
 
-        if 0 <= hour < 6:
+        # Night: residual power usage (base load)
+        if 0 <= simulated_hour < 6:
             load = base
-        elif 6 <= hour < 9:
-            frac = (hour - 6) / 3.0
+        # Morning ramp-up
+        elif 6 <= simulated_hour < 9:
+            frac = (simulated_hour - 6) / 3.0
             load = base + frac * (peak * 0.85 - base)
-        elif 9 <= hour < 17:
-            x = (hour - 9) / 8.0
+        # Working day (9am-5pm)
+        elif 9 <= simulated_hour < 17:
+            x = (simulated_hour - 9) / 8.0
             hump = 0.1 * peak * (1 - ((x - 0.75) / 0.75) ** 2)
             load = peak * 0.9 + max(0.0, hump)
-        elif 17 <= hour < 20:
-            frac = (20 - hour) / 3.0
+        # Evening ramp-down
+        elif 17 <= simulated_hour < 20:
+            frac = (20 - simulated_hour) / 3.0
             load = base + frac * (peak * 0.8 - base)
+        # Night: residual power usage
         else:
             load = base
 
@@ -100,12 +115,31 @@ class Simulator:
             return 0.5  # cloudy
         return 1.0     # clear
 
-    def _compute_battery_and_grid(self, building_load_w: float, pv_w: float, dt_hours: float) -> tuple[float, float]:
+    def _compute_battery_and_grid(self, building_load_w: float, pv_w: float, dt_hours: float, t: datetime) -> tuple[float, float]:
+        # Calculate simulated hour for cheap energy hours logic
+        elapsed_seconds = (t - self.start_time).total_seconds()
+        simulated_hour = (elapsed_seconds * self.time_compression / 3600.0) % 24.0
+        
         net_without_batt = building_load_w - pv_w
         battery_w = 0.0
         grid_w = 0.0
 
-        if net_without_batt <= 0:
+        # Cheap energy hours (12-2pm): prioritize charging battery from grid
+        is_cheap_hours = 12 <= simulated_hour < 14
+        if is_cheap_hours and self.battery_soc < self.BATTERY_MAX_SOC:
+            # Charge battery from grid during cheap hours
+            max_charge = self.BATTERY_CHARGE_MAX_W
+            if self.battery_soc >= 60.0:
+                max_charge *= 0.5
+            # Use up to 15kW from grid for charging during cheap hours
+            grid_charge_w = min(max_charge, 15_000.0)
+            battery_w = grid_charge_w
+            delta_soc = (grid_charge_w * dt_hours) / (self.BATTERY_CAPACITY_KWH * 1000) * 100.0
+            self.battery_soc = min(self.BATTERY_MAX_SOC, self.battery_soc + delta_soc)
+            # Grid supplies building load plus battery charging
+            grid_w = building_load_w + grid_charge_w
+        elif net_without_batt <= 0:
+            # Surplus: solar exceeds building load
             surplus = -net_without_batt
             if self.battery_soc < self.BATTERY_MAX_SOC:
                 max_charge = self.BATTERY_CHARGE_MAX_W
@@ -118,6 +152,7 @@ class Simulator:
                 self.battery_soc = min(self.BATTERY_MAX_SOC, self.battery_soc + delta_soc)
             grid_w = -surplus if surplus > 0 else 0.0
         else:
+            # Deficit: building load exceeds solar
             deficit = net_without_batt
             if self.battery_soc > self.BATTERY_MIN_SOC:
                 max_discharge = self.BATTERY_DISCHARGE_MAX_W
@@ -147,7 +182,7 @@ class Simulator:
         weather_factor = self._weather_factor(now)
         pv_w = pv_clear_w * weather_factor
 
-        battery_w, grid_w = self._compute_battery_and_grid(building_load_w, pv_w, dt_hours)
+        battery_w, grid_w = self._compute_battery_and_grid(building_load_w, pv_w, dt_hours, now)
 
         # add a bit of noise
         def jitter(value: float, pct: float = 0.02) -> float:
