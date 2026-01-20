@@ -186,65 +186,89 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
   const boxHeight = 100;
 
   // Layout matching PowerPoint diagram
+  // Building directly above inverter, Solar directly below inverter, Battery beside inverter
   const positions = {
-    building: { x: 400, y: 50 },
+    building: { x: 500, y: 50 },  // Directly above inverter
     grid: { x: 100, y: 200 },
     gridMeter: { x: 300, y: 200 },
-    inverter: { x: 500, y: 200 },
-    solar: { x: 400, y: 350 },
-    battery: { x: 600, y: 350 },
+    inverter: { x: 500, y: 200 },  // Center
+    solar: { x: 500, y: 350 },    // Directly below inverter
+    battery: { x: 650, y: 200 },  // Beside inverter (to the right)
   };
 
   // Define ALL possible interconnections (always visible)
   // Connection rules:
   // 1. Grid ↔ Grid Meter
   // 2. Grid Meter ↔ Inverter
-  // 3. Solar → Inverter
-  // 4. Battery ↔ Inverter
-  // 5. Building ↔ Inverter
-  // 6. Building ↔ Grid Meter
+  // 3. Solar → Inverter (vertical, uses 40%/60% offsets)
+  // 4. Battery ↔ Inverter (horizontal)
+  // 5. Building ↔ Inverter (vertical, uses 40%/60% offsets)
+  // 6. Building ↔ Grid Meter (vertical, uses 40%/60% offsets)
   type Side = "top" | "bottom" | "left" | "right";
+  type Offset = "left" | "right" | "center";
   const staticConnections: Array<{
     from: string;
     to: string;
     sideFrom: Side;
     sideTo: Side;
+    offsetFrom?: Offset;
+    offsetTo?: Offset;
   }> = [
-    // Grid ↔ Grid Meter
+    // Grid ↔ Grid Meter (horizontal)
     { from: "grid", to: "gridMeter", sideFrom: "right", sideTo: "left" },
     { from: "gridMeter", to: "grid", sideFrom: "left", sideTo: "right" },
     
-    // Grid Meter ↔ Inverter
+    // Grid Meter ↔ Inverter (horizontal)
     { from: "gridMeter", to: "inverter", sideFrom: "right", sideTo: "left" },
     { from: "inverter", to: "gridMeter", sideFrom: "left", sideTo: "right" },
     
-    // Solar → Inverter
-    { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom" },
+    // Solar → Inverter (vertical: solar top 40%, inverter bottom 40%)
+    // Bottom box (solar) connects at 40% of width, upper box (inverter) connects at 60% of width
+    { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "left" },
     
-    // Battery ↔ Inverter
+    // Battery ↔ Inverter (horizontal)
     { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right" },
     { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left" },
     
-    // Building ↔ Inverter
-    { from: "building", to: "inverter", sideFrom: "bottom", sideTo: "top" },
-    { from: "inverter", to: "building", sideFrom: "top", sideTo: "bottom" },
+    // Building ↔ Inverter (vertical: building bottom 40%, inverter top 60%)
+    // Lower box (building) bottom at 40%, upper box (inverter) top at 60%
+    { from: "building", to: "inverter", sideFrom: "bottom", sideTo: "top", offsetFrom: "left", offsetTo: "right" },
+    // Building ↔ Inverter (vertical: building bottom 60%, inverter top 40%)
+    { from: "inverter", to: "building", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "right" },
     
-    // Building ↔ Grid Meter
-    { from: "building", to: "gridMeter", sideFrom: "bottom", sideTo: "top" },
-    { from: "gridMeter", to: "building", sideFrom: "top", sideTo: "bottom" },
+    // Building ↔ Grid Meter (vertical: building bottom 60%, grid meter top 40%)
+    { from: "building", to: "gridMeter", sideFrom: "bottom", sideTo: "top", offsetFrom: "right", offsetTo: "left" },
+    { from: "gridMeter", to: "building", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "right" },
   ];
 
   // Calculate connection points
-  const getConnectionPoint = (node: string, side: Side) => {
+  // For vertical connections: use 40%/60% offsets
+  // Bottom box: 40% and 60% of width
+  // Top box: 60% and 40% of width (offset positions)
+  const getConnectionPoint = (node: string, side: Side, offset: "left" | "right" | "center" = "center") => {
     const pos = positions[node as keyof typeof positions];
     const halfW = boxWidth / 2;
     const halfH = boxHeight / 2;
     
     switch (side) {
       case "top":
-        return { x: pos.x, y: pos.y - halfH };
+        // Top edge: 60% and 40% of width (so right offset is at 60%, left offset is at 40%)
+        if (offset === "left") {
+          return { x: pos.x - halfW * 0.2, y: pos.y - halfH }; // 40% from left (x - 0.2*halfW = center - 20% = 40% from left edge)
+        } else if (offset === "right") {
+          return { x: pos.x + halfW * 0.2, y: pos.y - halfH }; // 60% from left (x + 0.2*halfW = center + 20% = 60% from left edge)
+        } else {
+          return { x: pos.x, y: pos.y - halfH };
+        }
       case "bottom":
-        return { x: pos.x, y: pos.y + halfH };
+        // Bottom edge: 40% and 60% of width
+        if (offset === "left") {
+          return { x: pos.x - halfW * 0.2, y: pos.y + halfH }; // 40% from left
+        } else if (offset === "right") {
+          return { x: pos.x + halfW * 0.2, y: pos.y + halfH }; // 60% from left
+        } else {
+          return { x: pos.x, y: pos.y + halfH };
+        }
       case "left":
         return { x: pos.x - halfW, y: pos.y };
       case "right":
@@ -255,25 +279,43 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
   };
 
   // Create right-angled path (always right-angled)
+  // For vertical connections: go up/down first (90 deg), then horizontal
+  // For horizontal connections: go horizontal first, then vertical
   const createRightAnglePath = (from: { x: number; y: number }, to: { x: number; y: number }, fromSide: Side, toSide: Side): string => {
     // Determine intermediate point for right angle
     let midX = from.x;
     let midY = from.y;
 
-    // Strategy: go horizontal first if from left/right, vertical first if from top/bottom
-    if (fromSide === "left" || fromSide === "right") {
-      // Horizontal first, then vertical
-      midX = to.x;
-      midY = from.y;
-    } else if (fromSide === "top" || fromSide === "bottom") {
-      // Vertical first, then horizontal
+    // Strategy based on connection type
+    if (fromSide === "top" || fromSide === "bottom") {
+      // Vertical connection: go vertical first (straight up/down at 90 deg), then horizontal
       if (toSide === "left" || toSide === "right") {
+        // Vertical to horizontal: go to target's Y first (straight up/down), then horizontal to target's X
         midX = from.x;
         midY = to.y;
       } else {
-        // Both vertical, use midpoint
-        midX = from.x;
-        midY = (from.y + to.y) / 2;
+        // Both vertical (top/bottom): go straight up/down first (90 deg), then horizontal to align X positions
+        if (Math.abs(from.x - to.x) > 1) {
+          // X positions differ: go straight up/down to target Y, then horizontal to target X
+          midX = from.x;
+          midY = to.y; // First go straight vertical to target's Y level
+        } else {
+          // X positions same: straight vertical line (no horizontal segment needed)
+          // But still need a midpoint for the path command
+          midX = from.x;
+          midY = (from.y + to.y) / 2;
+        }
+      }
+    } else if (fromSide === "left" || fromSide === "right") {
+      // Horizontal connection: go horizontal first, then vertical
+      if (toSide === "top" || toSide === "bottom") {
+        // Horizontal to vertical: go to target's X first, then vertical to target's Y
+        midX = to.x;
+        midY = from.y;
+      } else {
+        // Both horizontal: go straight left/right
+        midX = (from.x + to.x) / 2;
+        midY = from.y;
       }
     }
 
@@ -287,8 +329,8 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
         <svg width="700" height="450" className="absolute inset-0">
           {/* All static interconnection lines (always visible, gray when inactive) */}
           {staticConnections.map((conn, idx) => {
-            const fromPoint = getConnectionPoint(conn.from, conn.sideFrom);
-            const toPoint = getConnectionPoint(conn.to, conn.sideTo);
+            const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom);
+            const toPoint = getConnectionPoint(conn.to, conn.sideTo, conn.offsetTo);
             const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo);
             
             // Check if there's an active flow on this connection
@@ -312,11 +354,14 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           {/* Active energy flow lines (colored based on source) */}
           {flows.map((flow, idx) => {
             let fromPoint, toPoint, fromSide: Side, toSide: Side;
+            let offsetFrom: Offset = "center";
+            let offsetTo: Offset = "center";
             
             // Determine connection points based on flow direction
+            // Use 40%/60% offsets for vertical connections
             if (flow.from === "solar" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("solar", "top");
-              toPoint = getConnectionPoint("inverter", "bottom");
+              fromPoint = getConnectionPoint("solar", "top", "left"); // 40% from left
+              toPoint = getConnectionPoint("inverter", "bottom", "left"); // 40% from left
               fromSide = "top";
               toSide = "bottom";
             } else if (flow.from === "inverter" && flow.to === "battery") {
@@ -330,13 +375,13 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
               fromSide = "left";
               toSide = "right";
             } else if (flow.from === "inverter" && flow.to === "building") {
-              fromPoint = getConnectionPoint("inverter", "top");
-              toPoint = getConnectionPoint("building", "bottom");
+              fromPoint = getConnectionPoint("inverter", "top", "left"); // 40% from left
+              toPoint = getConnectionPoint("building", "bottom", "right"); // 60% from left
               fromSide = "top";
               toSide = "bottom";
             } else if (flow.from === "building" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("building", "bottom");
-              toPoint = getConnectionPoint("inverter", "top");
+              fromPoint = getConnectionPoint("building", "bottom", "right"); // 60% from left
+              toPoint = getConnectionPoint("inverter", "top", "left"); // 40% from left
               fromSide = "bottom";
               toSide = "top";
             } else if (flow.from === "inverter" && flow.to === "gridMeter") {
@@ -360,13 +405,13 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
               fromSide = "right";
               toSide = "left";
             } else if (flow.from === "gridMeter" && flow.to === "building") {
-              fromPoint = getConnectionPoint("gridMeter", "top");
-              toPoint = getConnectionPoint("building", "bottom");
+              fromPoint = getConnectionPoint("gridMeter", "top", "left"); // 40% from left
+              toPoint = getConnectionPoint("building", "bottom", "right"); // 60% from left
               fromSide = "top";
               toSide = "bottom";
             } else if (flow.from === "building" && flow.to === "gridMeter") {
-              fromPoint = getConnectionPoint("building", "bottom");
-              toPoint = getConnectionPoint("gridMeter", "top");
+              fromPoint = getConnectionPoint("building", "bottom", "right"); // 60% from left
+              toPoint = getConnectionPoint("gridMeter", "top", "left"); // 40% from left
               fromSide = "bottom";
               toSide = "top";
             } else {
