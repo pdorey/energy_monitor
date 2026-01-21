@@ -421,8 +421,12 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             
             // Check if this path is active based on Excel path definitions
             let isPathActive: boolean = false;
-            //let pathColor: string = flowColors.inactive;
+            let pathColor: string = flowColors.inactive;
             
+            if (!isPathActive) {
+              pathColor = flowColors.inactive;
+            }
+
             if (activePaths.length > 0 && pathDefinitions.length > 0) {
               // Find matching path definition
               const matchingPath = pathDefinitions.find(pd => 
