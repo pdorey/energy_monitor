@@ -376,40 +376,56 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
     return `M ${from.x} ${from.y} L ${midX} ${midY} L ${to.x} ${to.y}`;
   };
 
-  // Animated time display - updates every second
+  // Animated time display - updates every second, value comes from Consumption.csv
   const [currentTime, setCurrentTime] = useState<string>("");
   
   useEffect(() => {
     const updateTime = () => {
       if (displayTime) {
+        // Primary source: TIME column from Consumption.csv
         setCurrentTime(displayTime);
       } else {
-        // Use snapshot or overview timestamp
+        // Fallback: use snapshot or overview timestamp
         const ts = snapshot?.timestamp || overview?.timestamp;
         if (ts) {
           const date = new Date(ts);
-          setCurrentTime(date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+          setCurrentTime(
+            date.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false,
+            })
+          );
         } else {
           const now = new Date();
-          setCurrentTime(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+          setCurrentTime(
+            now.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false,
+            })
+          );
         }
       }
     };
-    
+
     updateTime();
-    const interval = setInterval(updateTime, 1000); // Update every second
-    
+    const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, [displayTime, snapshot?.timestamp, overview?.timestamp]);
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-6 overflow-x-auto">
-      <div className="flex items-center gap-4 mb-4">
-        {/* Animated time display in top left */}
-        {currentTime && (
-          <div className="text-base font-semibold text-slate-300 font-mono">{currentTime}</div>
-        )}
+      <div className="flex items-center mb-4">
         <div className="text-base font-semibold uppercase text-slate-300">Energy Flow</div>
+        {/* Animated time display in top right */}
+        {currentTime && (
+          <div className="ml-auto text-base font-semibold text-slate-300 font-mono">
+            {currentTime}
+          </div>
+        )}
       </div>
       <div className="relative" style={{ width: "700px", height: "450px", margin: "0 auto" }}>
         <svg width="700" height="450" className="absolute inset-0">

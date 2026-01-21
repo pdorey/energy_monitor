@@ -81,6 +81,29 @@ export function App() {
     load();
   }, []);
 
+  // Periodically refresh consumption/path data so TIME and active paths follow simulated time
+  useEffect(() => {
+    let timer: number | undefined;
+
+    const poll = async () => {
+      try {
+        const data = await fetchJSON<ConsumptionData>("/api/consumption-data");
+        setConsumptionData(data);
+      } catch {
+        // ignore transient errors
+      }
+    };
+
+    poll();
+    timer = window.setInterval(poll, 2000);
+
+    return () => {
+      if (timer !== undefined) {
+        window.clearInterval(timer);
+      }
+    };
+  }, []);
+
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
   //const gridKw = snapshot?.grid.power_w ? snapshot.grid.power_w / 1000 : overview?.grid_kw ?? 0;
   //const loadKw = snapshot?.load.power_w ? snapshot.load.power_w / 1000 : overview?.load_kw ?? 0;
