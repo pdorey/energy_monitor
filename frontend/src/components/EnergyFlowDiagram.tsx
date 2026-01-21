@@ -299,10 +299,16 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   ];
 
   // Calculate connection points
-  const getConnectionPoint = (node: string, side: Side, offset: "left" | "right" | "center" = "center") => {
+  // When both nodes are inverter/battery, use 30%/50%/70% offsets
+  // Otherwise use 40%/60%/50% offsets
+  const getConnectionPoint = (node: string, side: Side, offset: "left" | "right" | "center" = "center", otherNode?: string) => {
     const pos = positions[node as keyof typeof positions];
     const halfW = boxWidth / 2;
     const halfH = boxHeight / 2;
+    
+    // Check if this is an inverter ↔ battery connection
+    const isInverterBatteryConnection = (node === "inverter" || node === "battery") && 
+                                       (otherNode === "inverter" || otherNode === "battery");
     
     switch (side) {
       case "top":
@@ -325,9 +331,9 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         }
       case "left":
         // Left edge:
-        // - For inverter/battery we use 30%/50%/70% of height (left/center/right)
-        // - For other boxes we keep 40%/60%/50%
-        if (node === "inverter" || node === "battery") {
+        // - For inverter ↔ battery connections: 30%/50%/70% of height
+        // - For all other connections: 40%/60%/50% of height
+        if (isInverterBatteryConnection) {
           if (offset === "left") {
             return { x: pos.x - halfW, y: pos.y - halfH * 0.4 }; // 30% from top
           } else if (offset === "right") {
@@ -346,9 +352,9 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         }
       case "right":
         // Right edge:
-        // - For inverter/battery we use 30%/50%/70% of height (left/center/right)
-        // - For other boxes we keep 40%/60%/50%
-        if (node === "inverter" || node === "battery") {
+        // - For inverter ↔ battery connections: 30%/50%/70% of height
+        // - For all other connections: 40%/60%/50% of height
+        if (isInverterBatteryConnection) {
           if (offset === "left") {
             return { x: pos.x + halfW, y: pos.y - halfH * 0.4 }; // 30% from top
           } else if (offset === "right") {
@@ -477,45 +483,18 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         <svg width="700" height="450" className="absolute inset-0">
           {/* All static interconnection lines (always visible, gray when inactive) */}
           {staticConnections.map((conn, idx) => {
-            const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom);
-            const toPoint = getConnectionPoint(conn.to, conn.sideTo, conn.offsetTo);
+            const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom, conn.to);
+            const toPoint = getConnectionPoint(conn.to, conn.sideTo, conn.offsetTo, conn.from);
             const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo, conn.isRightAngle);
             
-            // Check if this path is active based on Excel path definitions
-            let isPathActive: boolean = false;
-            let pathColor = flowColors.inactive;
-            
-            if (pathColor===flowColors.inactive) {
-              pathColor = flowColors.inactive;
-            } 
-
-            if (activePaths.length > 0 && pathDefinitions.length > 0) {
-              // Find matching path definition
-              const matchingPath = pathDefinitions.find(pd => 
-                activePaths.includes(pd.path_id) &&
-                pd.from.toLowerCase() === conn.from.toLowerCase() &&
-                pd.to.toLowerCase() === conn.to.toLowerCase()
-              );
-              
-              if (matchingPath) {
-                isPathActive = true;
-                // Parse color from Excel (could be color name or RGB)
-                pathColor = matchingPath.color || flowColors.solar;
-              }
-            } else {
-              // Fallback to calculated flows if no Excel data
-              const activeFlow = flows.find(
-                f => f.from === conn.from && f.to === conn.to
-              );
-              isPathActive = activeFlow !== undefined;
-            }
-            
+            // All static lines are always visible (gray when inactive)
+            // Active lines are drawn on top with color and animation
             return (
               <path
                 key={`static-${conn.from}-${conn.to}-${idx}`}
                 d={path}
                 fill="none"
-                stroke={isPathActive ? "transparent" : flowColors.inactive}
+                stroke={flowColors.inactive}
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -538,8 +517,8 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
                   
                   if (!conn) return null;
                   
-                  const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom);
-                  const toPoint = getConnectionPoint(conn.to, conn.sideTo, conn.offsetTo);
+                  const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom, conn.to);
+                  const toPoint = getConnectionPoint(conn.to, conn.sideTo, conn.offsetTo, conn.from);
                   const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo, conn.isRightAngle);
                   
                   // Parse color (could be color name, RGB, or hex)
@@ -596,58 +575,58 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             // Determine connection points based on flow direction
             // Use 40%/60% offsets for vertical connections
             if (flow.from === "solar" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("solar", "top", "center"); // 40% from left
-              toPoint = getConnectionPoint("inverter", "bottom", "center"); // 40% from left
+              fromPoint = getConnectionPoint("solar", "top", "center", "inverter");
+              toPoint = getConnectionPoint("inverter", "bottom", "center", "solar");
               fromSide = "top";
               toSide = "bottom";
             } else if (flow.from === "inverter" && flow.to === "battery") {
-              fromPoint = getConnectionPoint("inverter", "right");
-              toPoint = getConnectionPoint("battery", "left");
+              fromPoint = getConnectionPoint("inverter", "right", "center", "battery");
+              toPoint = getConnectionPoint("battery", "left", "center", "inverter");
               fromSide = "right";
               toSide = "left";
             } else if (flow.from === "battery" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("battery", "left");
-              toPoint = getConnectionPoint("inverter", "right");
+              fromPoint = getConnectionPoint("battery", "left", "center", "inverter");
+              toPoint = getConnectionPoint("inverter", "right", "center", "battery");
               fromSide = "left";
               toSide = "right";
             } else if (flow.from === "inverter" && flow.to === "building") {
-              fromPoint = getConnectionPoint("inverter", "top", "left"); // 40% from left
-              toPoint = getConnectionPoint("building", "bottom", "right"); // 60% from left
+              fromPoint = getConnectionPoint("inverter", "top", "left", "building");
+              toPoint = getConnectionPoint("building", "bottom", "right", "inverter");
               fromSide = "top";
               toSide = "bottom";
             } else if (flow.from === "building" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("building", "bottom", "right"); // 60% from left
-              toPoint = getConnectionPoint("inverter", "top", "left"); // 40% from left
+              fromPoint = getConnectionPoint("building", "bottom", "right", "inverter");
+              toPoint = getConnectionPoint("inverter", "top", "left", "building");
               fromSide = "bottom";
               toSide = "top";
             } else if (flow.from === "inverter" && flow.to === "gridMeter") {
-              fromPoint = getConnectionPoint("inverter", "left");
-              toPoint = getConnectionPoint("gridMeter", "right");
+              fromPoint = getConnectionPoint("inverter", "left", "right", "gridMeter");
+              toPoint = getConnectionPoint("gridMeter", "right", "right", "inverter");
               fromSide = "left";
               toSide = "right";
             } else if (flow.from === "gridMeter" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("gridMeter", "right");
-              toPoint = getConnectionPoint("inverter", "left");
+              fromPoint = getConnectionPoint("gridMeter", "right", "left", "inverter");
+              toPoint = getConnectionPoint("inverter", "left", "left", "gridMeter");
               fromSide = "right";
               toSide = "left";
             } else if (flow.from === "gridMeter" && flow.to === "grid") {
-              fromPoint = getConnectionPoint("gridMeter", "left");
-              toPoint = getConnectionPoint("grid", "right");
+              fromPoint = getConnectionPoint("gridMeter", "left", "right", "grid");
+              toPoint = getConnectionPoint("grid", "right", "right", "gridMeter");
               fromSide = "left";
               toSide = "right";
             } else if (flow.from === "grid" && flow.to === "gridMeter") {
-              fromPoint = getConnectionPoint("grid", "right");
-              toPoint = getConnectionPoint("gridMeter", "left");
+              fromPoint = getConnectionPoint("grid", "right", "left", "gridMeter");
+              toPoint = getConnectionPoint("gridMeter", "left", "left", "grid");
               fromSide = "right";
               toSide = "left";
             } else if (flow.from === "gridMeter" && flow.to === "building") {
-              fromPoint = getConnectionPoint("gridMeter", "top", "left"); // 40% from left
-              toPoint = getConnectionPoint("building", "bottom", "right"); // 60% from left
+              fromPoint = getConnectionPoint("gridMeter", "top", "left", "building");
+              toPoint = getConnectionPoint("building", "bottom", "right", "gridMeter");
               fromSide = "top";
               toSide = "bottom";
             } else if (flow.from === "building" && flow.to === "gridMeter") {
-              fromPoint = getConnectionPoint("building", "bottom", "right"); // 60% from left
-              toPoint = getConnectionPoint("gridMeter", "top", "left"); // 40% from left
+              fromPoint = getConnectionPoint("building", "bottom", "right", "gridMeter");
+              toPoint = getConnectionPoint("gridMeter", "top", "left", "building");
               fromSide = "bottom";
               toSide = "top";
             } else {
@@ -709,7 +688,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
 
         {/* Grid */}
         <div
-          className="absolute bg-blue-900/40 rounded-lg p-3 border-2 border-blue-500/50 flex flex-col items-center justify-center"
+          className="absolute bg-red-900/40 rounded-lg p-3 border-2 border-red-500/50 flex flex-col items-center justify-center"
           style={{
             left: positions.grid.x - boxWidth / 2,
             top: positions.grid.y - boxHeight / 2,
@@ -718,8 +697,8 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
           }}
         >
           <div className="text-2xl mb-1">⚡</div>
-          <div className="text-lg font-semibold text-blue-300 mb-1">{labels?.grid || "GRID"}</div>
-          <div className={`text-sm font-mono ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>
+          <div className="text-lg font-semibold text-red-300 mb-1">{labels?.grid || "GRID"}</div>
+          <div className={`text-sm font-mono ${gridKw >= 0 ? "text-red-300" : "text-emerald-300"}`}>
             {gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)} kW
           </div>
           <div className="text-xs text-slate-400 mt-1">
