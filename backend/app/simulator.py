@@ -59,7 +59,16 @@ class Simulator:
             try:
                 with open(consumption_csv, newline="", encoding="utf-8") as f:
                     reader = csv.DictReader(f)
-                    self._rows = [row for row in reader if any(row.values())]
+                    cleaned_rows: list[dict] = []
+                    for row in reader:
+                        if not any(row.values()):
+                            continue
+                        # Normalise header keys to avoid BOM / whitespace issues
+                        row_clean = {
+                            (k or "").strip().lstrip("\ufeff"): v for k, v in row.items()
+                        }
+                        cleaned_rows.append(row_clean)
+                    self._rows = cleaned_rows
                 print(f"[Simulator] Loaded {len(self._rows)} rows from {consumption_csv}")
             except Exception as e:
                 print(f"[Simulator] ERROR loading CSV from {consumption_csv}: {e}")

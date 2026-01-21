@@ -178,7 +178,12 @@ async def get_consumption_data():
             return {"error": "Simulator not initialized"}
 
         # Ask simulator which row is current so we stay perfectly in sync
-        row = sim.get_current_row()  # type: ignore[attr-defined]
+        raw_row = sim.get_current_row()  # type: ignore[attr-defined]
+        row = None
+        if raw_row is not None:
+            # Normalise header keys to avoid BOM / whitespace issues (e.g. '\ufeffTIME')
+            row = {(k or "").strip().lstrip("\ufeff"): (v or "") for k, v in raw_row.items()}
+
         if row is None:
             return {"error": "Consumption.csv not found or empty"}
 
