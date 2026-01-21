@@ -52,22 +52,22 @@ const flowColors = {
 
 // Path definitions from Excel table N3:R9
 // Each path defines which connection should be active and what color
-interface PathDefinition {
-  pathId: string;
-  from: string;
-  to: string;
-  color: string;
-}
+// interface PathDefinition {
+//   pathId: string;
+//   from: string;
+//   to: string;
+//   color: string;
+// }
 
 // Define paths based on Excel table structure
 // This will be populated from the Excel data
-const pathDefinitions: PathDefinition[] = [
+//const pathDefinitions: PathDefinition[] = [
   // These will be defined based on Excel table N3:R9
   // Example structure:
-  // { pathId: "PATH 1", from: "solar", to: "inverter", color: flowColors.solar },
+  //{ pathId: "PATH 1", from: "grid", to: "inverter", color: flowColors.solar },
   // { pathId: "PATH 2", from: "inverter", to: "battery", color: flowColors.solar },
   // etc.
-];
+//];
 
 export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDefinitions = [], labels, displayTime }: EnergyFlowDiagramProps) {
   // Calculate power values in kW
