@@ -202,12 +202,11 @@ async def get_consumption_data():
         power_kw = building_kw  # alias, if needed
         solar_kw = parse_float("SOLAR PWR")
 
-        # Active paths (PATH 1, PATH 2, PATH 3)
+        # Active path ID (single PATH column, e.g. a..g)
         active_paths: list[str] = []
-        for col in ("PATH 1", "PATH 2", "PATH 3"):
-            val = (row.get(col) or "").strip()
-            if val:
-                active_paths.append(str(val))
+        path_val = (row.get("PATH") or "").strip()
+        if path_val:
+            active_paths.append(path_val)
 
         # Labels for boxes
         labels = {
@@ -220,7 +219,7 @@ async def get_consumption_data():
         # Load path definitions from Paths.csv
         path_definitions: list[dict] = []
         if os.path.exists(PATHS_CSV):
-            with open(PATHS_CSV, newline="") as f:
+            with open(PATHS_CSV, newline="", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
 
                 def map_node(name: str) -> str:
@@ -239,43 +238,53 @@ async def get_consumption_data():
                         return "solar"
                     return n.lower()
 
+                # Normalise headers once so we can work with clean keys
+                raw_rows: list[dict] = []
                 for prow in reader:
-                    path_id = (prow.get("PATHS") or "").strip()
-                    if not path_id:
+                    if not any(prow.values()):
+                        continue
+                    clean = {(k or "").strip().lstrip("\ufeff"): (v or "") for k, v in prow.items()}
+                    raw_rows.append(clean)
+
+                # Build segment-level definitions: only keep segments where status == active.
+                # Color and source now come directly from CSV columns "source" and "lineColor".
+                for prow in raw_rows:
+                    pid = (prow.get("PATH") or "").strip()
+                    status = (prow.get("status") or "").strip().lower()
+                    if not pid or status != "active":
                         continue
 
-                    steps = [
-                        (prow.get("Step 1") or "").strip(),
-                        (prow.get("Step 2") or "").strip(),
-                        (prow.get("Step 3") or "").strip(),
-                        (prow.get("Step 4") or "").strip(),
-                    ]
-                    steps = [s for s in steps if s]
-                    if len(steps) < 2:
+                    from_raw = (prow.get("from") or "").strip()
+                    to_raw = (prow.get("to") or "").strip()
+                    if not from_raw or not to_raw:
                         continue
 
-                    # Color based on source node (first step)
-                    source = steps[0].strip().upper()
-                    if source == "GRID":
-                        color = "red"
-                    elif source == "SOLAR":
-                        color = "yellow"
-                    elif source == "BATTERY":
-                        color = "green"
-                    else:
-                        color = "white"
+                    # Source column (e.g. grid_pwr / solar_pwr / battery_pwr)
+                    source_raw = (prow.get("source") or "").strip().lower()
+                    # lineColor column gives preferred display colour; if empty,
+                    # fall back to a sensible default based on source.
+                    color_raw = (prow.get("lineColor") or "").strip()
 
-                    description = " → ".join(steps)
-                    for i in range(len(steps) - 1):
-                        path_definitions.append(
-                            {
-                                "path_id": str(path_id),
-                                "from": map_node(steps[i]),
-                                "to": map_node(steps[i + 1]),
-                                "color": color,
-                                "description": description,
-                            }
-                        )
+                    color = color_raw
+                    if not color:
+                        if "solar" in source_raw:
+                            color = "yellow"
+                        elif "battery" in source_raw:
+                            color = "green"
+                        elif "grid" in source_raw:
+                            color = "red"
+                        else:
+                            color = "white"
+
+                    path_definitions.append(
+                        {
+                            "path_id": pid,
+                            "from": map_node(from_raw),
+                            "to": map_node(to_raw),
+                            "color": color,
+                            "description": f"{pid}: {from_raw} → {to_raw}",
+                        }
+                    )
 
         return {
             "time": time_value,

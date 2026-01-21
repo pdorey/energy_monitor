@@ -251,6 +251,9 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   // 5. Inverter ↔ Building: 2 vertical lines (with 40%/60% offsets)
   // 6. Grid Meter ↔ Building: 1 right-angle line (top of grid meter to left of building)
   type Side = "top" | "bottom" | "left" | "right";
+  // Offset is interpreted along the relevant dimension:
+  // - For vertical sides (top/bottom): left/right mean 40%/60% of width, center = 50%
+  // - For horizontal sides (left/right): left/right mean 40%/60% of height, center = 50%
   type Offset = "left" | "right" | "center";
   const staticConnections: Array<{
     from: string;
@@ -261,18 +264,22 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
     offsetTo?: Offset;
     isRightAngle?: boolean; // For special right-angle paths
   }> = [
-    // Grid ↔ Grid Meter: 2 horizontal lines
+    // Grid ↔ Grid Meter: single physical connection, lines depart from middle
     { from: "grid", to: "gridMeter", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
     { from: "gridMeter", to: "grid", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
     
-    // Grid Meter ↔ Inverter: 2 horizontal lines
-    { from: "gridMeter", to: "inverter", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
-    { from: "inverter", to: "gridMeter", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
+    // Grid Meter ↔ Inverter: 2 possible connections – depart from 40% and 60% of height
+    { from: "gridMeter", to: "inverter", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
+    { from: "inverter", to: "gridMeter", sideFrom: "left", sideTo: "right", offsetFrom: "right", offsetTo: "right" },
     
-    // Inverter ↔ Battery: 3 horizontal lines
-    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
+    // Inverter ↔ Battery: 3 possible connections – depart from 40%, 50% and 60% of height
+    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
     { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
-    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" }, // Third line
+    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "right", offsetTo: "right" },
+    // Reverse direction uses same physical paths
+    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "left", offsetTo: "left" },
+    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
+    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "right", offsetTo: "right" },
     
     // Solar ↔ Inverter: 1 vertical line (center to center)
     { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom", offsetFrom: "center", offsetTo: "center" },
@@ -288,9 +295,6 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   ];
 
   // Calculate connection points
-  // For vertical connections: use 40%/60% offsets
-  // Bottom box: 40% and 60% of width
-  // Top box: 60% and 40% of width (offset positions)
   const getConnectionPoint = (node: string, side: Side, offset: "left" | "right" | "center" = "center") => {
     const pos = positions[node as keyof typeof positions];
     const halfW = boxWidth / 2;
@@ -300,9 +304,9 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
       case "top":
         // Top edge: 60% and 40% of width (so right offset is at 60%, left offset is at 40%)
         if (offset === "left") {
-          return { x: pos.x - halfW * 0.2, y: pos.y - halfH }; // 40% from left (x - 0.2*halfW = center - 20% = 40% from left edge)
+          return { x: pos.x - halfW * 0.2, y: pos.y - halfH }; // 40% from left
         } else if (offset === "right") {
-          return { x: pos.x + halfW * 0.2, y: pos.y - halfH }; // 60% from left (x + 0.2*halfW = center + 20% = 60% from left edge)
+          return { x: pos.x + halfW * 0.2, y: pos.y - halfH }; // 60% from left
         } else {
           return { x: pos.x, y: pos.y - halfH };
         }
@@ -316,9 +320,23 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
           return { x: pos.x, y: pos.y + halfH };
         }
       case "left":
-        return { x: pos.x - halfW, y: pos.y };
+        // Left edge: use 40%/60% of height
+        if (offset === "left") {
+          return { x: pos.x - halfW, y: pos.y - halfH * 0.2 }; // 40% from top
+        } else if (offset === "right") {
+          return { x: pos.x - halfW, y: pos.y + halfH * 0.2 }; // 60% from top
+        } else {
+          return { x: pos.x - halfW, y: pos.y };
+        }
       case "right":
-        return { x: pos.x + halfW, y: pos.y };
+        // Right edge: use 40%/60% of height
+        if (offset === "left") {
+          return { x: pos.x + halfW, y: pos.y - halfH * 0.2 }; // 40% from top
+        } else if (offset === "right") {
+          return { x: pos.x + halfW, y: pos.y + halfH * 0.2 }; // 60% from top
+        } else {
+          return { x: pos.x + halfW, y: pos.y };
+        }
       default:
         return pos;
     }
