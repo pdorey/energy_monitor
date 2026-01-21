@@ -100,31 +100,21 @@ async def api_analytics(hours: int = 24, resolution: int = 60):
 
 @app.get("/api/consumption-data")
 async def get_consumption_data():
-    """Read consumption and path data from CSV files and return current row data."""
+    """
+    Read consumption and path data from CSV files and return current row data.
+
+    Uses the same time-compressed index as the Simulator by asking the simulator
+    for the current row, so values, paths and timestamps stay in sync.
+    """
     try:
-        if not os.path.exists(CONSUMPTION_CSV):
-            return {"error": "Consumption.csv not found"}
+        if not sim:
+            return {"error": "Simulator not initialized"}
 
-        # Load all consumption rows (15 minute intervals)
-        with open(CONSUMPTION_CSV, newline="") as f:
-            reader = csv.DictReader(f)
-            consumption_rows = [row for row in reader if any(row.values())]
-
-        if not consumption_rows:
-            return {"error": "Consumption.csv has no data"}
-
-        # Determine current simulated interval (24h compressed into 2 minutes)
-        if sim:
-            elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
-            # 24 hours = 86400 seconds, compressed to 120 seconds (2 minutes)
-            # So 1 second real time = 720 seconds simulated time
-            simulated_seconds = elapsed * 720.0
-            # 900 seconds = 15 minutes
-            interval = int(simulated_seconds / 900.0) % len(consumption_rows)
-        else:
-            interval = 0
-
-        row = consumption_rows[interval]
+        # Ask simulator which row is current so we stay perfectly in sync
+        now = datetime.now(timezone.utc)
+        row = sim._get_consumption_row(now)  # type: ignore[attr-defined]
+        if row is None:
+            return {"error": "Consumption.csv not found or empty"}
 
         # Parse core metrics
         time_value = (row.get("TIME") or "").strip()
