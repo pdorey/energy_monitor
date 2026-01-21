@@ -28,18 +28,42 @@ class Simulator:
     All building, grid, battery, solar power and battery SOC values come directly
     from `Consumption.csv` in 15‑minute steps over a 24‑hour period. When the
     last row is reached, the simulator loops back to the first row and repeats
-    the 24‑hour cycle indefinitely (time‑compressed according to `time_compression`).
+    the 24‑hour cycle indefinitely.
+
+    The simulator simply walks row‑by‑row through the CSV on each call to
+    `generate_snapshot`, without using real time.
     """
 
     BATTERY_CAPACITY_KWH = 400.0
 
-    def __init__(self, history_hours: int = 24, step_seconds: int = 2) -> None:
-        self.battery_soc = 60.0
-        self.start_time = datetime.now(timezone.utc)
-        self.last_update = self.start_time
-        self.step_seconds = step_seconds
-        # Compress 24 hours into 2 minutes: 24 * 3600 / 120 = 720x speedup
-        self.time_compression = 720.0
+    def __init__(self, history_hours: int = 24, step_seconds: int = 900) -> None:
+        # Load CSV once at startup
+        root_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..")
+        consumption_csv = os.path.join(root_dir, "Consumption.csv")
+        self._rows: list[dict] = []
+        if os.path.exists(consumption_csv):
+            try:
+                with open(consumption_csv, newline="") as f:
+                    reader = csv.DictReader(f)
+                    self._rows = [row for row in reader if any(row.values())]
+            except Exception:
+                self._rows = []
+
+        self._row_count = len(self._rows)
+        self._index = 0  # current row index (0..row_count-1)
+        self._last_index = 0  # last row index used for snapshot
+
+        # Initial SOC from first row if available, otherwise default
+        self.battery_soc = 95.0
+        if self._row_count:
+            soc_raw = (self._rows[0].get("BATTERY SOC") or "").strip()
+            if soc_raw.endswith("%"):
+                soc_raw = soc_raw[:-1]
+            if soc_raw:
+                try:
+                    self.battery_soc = float(soc_raw)
+                except ValueError:
+                    pass
 
         max_points = int(history_hours * 3600 / step_seconds)
         self.history: Dict[str, Deque[TimeseriesPoint]] = {
@@ -49,46 +73,32 @@ class Simulator:
             "load_kw": deque(maxlen=max_points),
         }
 
-        # Path to consumption CSV (15‑minute rows, full 24h)
-        root_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..")
-        self._consumption_csv = os.path.join(root_dir, "Consumption.csv")
-
     # --- internal helpers -------------------------------------------------
 
-    def _load_consumption_rows(self) -> list[dict]:
-        """Load all rows from Consumption.csv (reloaded each time to pick up edits)."""
-        if not os.path.exists(self._consumption_csv):
-            return []
-        try:
-            with open(self._consumption_csv, newline="") as f:
-                reader = csv.DictReader(f)
-                return [row for row in reader if any(row.values())]
-        except Exception:
-            return []
-
-    def _get_consumption_row(self, t: datetime) -> dict | None:
-        """
-        Return the current 15‑minute interval row from Consumption.csv, if loaded.
-
-        Index is based purely on elapsed simulated time, modulo the number of rows,
-        so we repeat the 24‑hour pattern indefinitely.
-        """
-        rows = self._load_consumption_rows()
-        if not rows:
+    def _current_row(self) -> dict | None:
+        """Return the row currently pointed to by the simulator index."""
+        if not self._row_count:
             return None
+        return self._rows[self._index]
 
-        elapsed_seconds = (t - self.start_time).total_seconds()
-        simulated_seconds = elapsed_seconds * self.time_compression
-        # 900 seconds = 15 minutes
-        idx = int(simulated_seconds / 900.0) % len(rows)
-        return rows[idx]
+    def get_current_row(self) -> dict | None:
+        """
+        Public helper for other parts of the app (e.g. /api/consumption-data)
+        to see the row used for the most recent snapshot.
+        """
+        if not self._row_count:
+            return None
+        return self._rows[self._last_index]
 
     # --- public API -------------------------------------------------------
 
     def generate_snapshot(self) -> Snapshot:
         now = datetime.now(timezone.utc)
-        self.last_update = now
-        row = self._get_consumption_row(now)
+        row = self._current_row()
+        self._last_index = self._index
+        if self._row_count:
+            # advance to next row for the next call
+            self._index = (self._index + 1) % self._row_count
 
         # Defaults if CSV is missing
         building_load_w = 0.0

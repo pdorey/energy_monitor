@@ -111,8 +111,7 @@ async def get_consumption_data():
             return {"error": "Simulator not initialized"}
 
         # Ask simulator which row is current so we stay perfectly in sync
-        now = datetime.now(timezone.utc)
-        row = sim._get_consumption_row(now)  # type: ignore[attr-defined]
+        row = sim.get_current_row()  # type: ignore[attr-defined]
         if row is None:
             return {"error": "Consumption.csv not found or empty"}
 
