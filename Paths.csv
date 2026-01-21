@@ -1,5 +1,5 @@
 ﻿PATH,from,to,source,status,lineColor
-a,grid,gridMeter,grid_pwr,active,blue
+a,grid,gridMeter,grid_pwr,active,red
 a,gridMeter,building,grid_pwr,active,red
 a,gridMeter,inverter,grid_pwr,inactive,red
 a,inverter,battery,grid_pwr,inactive,red

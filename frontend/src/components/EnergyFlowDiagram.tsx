@@ -276,12 +276,15 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
     { from: "inverter", to: "gridMeter", sideFrom: "left", sideTo: "right", offsetFrom: "right", offsetTo: "right" },
     
     // Inverter ↔ Battery:
-    // 3) battery -> inverter: 30% from top of both boxes (we'll use offset "left" = 30%)
+    // Top line (30% from top): battery_pwr source
     { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "left", offsetTo: "left" },
-    // 4) inverter -> battery (grid_pwr): 50% from top of both boxes (offset "center" = 50%)
+    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
+    // Middle line (50% from top): grid_pwr source
     { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
-    // 5) inverter -> battery (solar_pwr): 70% from top of both boxes (offset "right" = 70%)
+    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
+    // Bottom line (70% from top): solar_pwr source
     { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "right", offsetTo: "right" },
+    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "right", offsetTo: "right" },
     
     // Solar ↔ Inverter: 1 vertical line (center to center)
     { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom", offsetFrom: "center", offsetTo: "center" },
@@ -511,20 +514,37 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
                 const pathDefs = pathDefinitions.filter(pd => pd.path_id === pathId);
                 return pathDefs.map((pathDef, idx) => {
                   // Find the connection for this path
-                  // For inverter -> building, match based on source to get the correct line (40% vs 60%)
+                  // Match based on source to get the correct line for connections with multiple lines
                   let conn = staticConnections.find(c => {
                     const fromMatch = c.from.toLowerCase() === pathDef.from.toLowerCase();
                     const toMatch = c.to.toLowerCase() === pathDef.to.toLowerCase();
                     if (!fromMatch || !toMatch) return false;
                     
+                    const source = (pathDef.source || "").toLowerCase();
+                    
                     // Special handling for inverter -> building: match based on source
                     if (pathDef.from.toLowerCase() === "inverter" && pathDef.to.toLowerCase() === "building") {
-                      const source = (pathDef.source || "").toLowerCase();
                       if (source.includes("solar")) {
                         // solar_pwr -> left/left (40% to 40%)
                         return c.offsetFrom === "left" && c.offsetTo === "left";
                       } else if (source.includes("battery")) {
                         // battery_pwr -> right/right (60% to 60%)
+                        return c.offsetFrom === "right" && c.offsetTo === "right";
+                      }
+                    }
+                    
+                    // Special handling for inverter <-> battery: match based on source
+                    // Top line (30%): battery_pwr, Middle line (50%): grid_pwr, Bottom line (70%): solar_pwr
+                    if ((pathDef.from.toLowerCase() === "inverter" && pathDef.to.toLowerCase() === "battery") ||
+                        (pathDef.from.toLowerCase() === "battery" && pathDef.to.toLowerCase() === "inverter")) {
+                      if (source.includes("battery")) {
+                        // battery_pwr -> left/left (30% from top)
+                        return c.offsetFrom === "left" && c.offsetTo === "left";
+                      } else if (source.includes("grid")) {
+                        // grid_pwr -> center/center (50% from top)
+                        return c.offsetFrom === "center" && c.offsetTo === "center";
+                      } else if (source.includes("solar")) {
+                        // solar_pwr -> right/right (70% from top)
                         return c.offsetFrom === "right" && c.offsetTo === "right";
                       }
                     }
@@ -716,7 +736,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         >
           <div className="flex items-center gap-1 mb-1">
             <div className="text-xl">🏢</div>
-            <div className="text-xs font-semibold text-slate-300">Building Load</div>
+            <div className="text-xs font-semibold text-slate-300">BUILDING LOAD</div>
           </div>
           <div className="text-sm font-mono text-slate-300">
             {loadKw.toFixed(1)}{loadKw !== 0 ? " kW" : ""}
