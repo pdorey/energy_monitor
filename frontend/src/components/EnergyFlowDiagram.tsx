@@ -264,9 +264,11 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
     offsetTo?: Offset;
     isRightAngle?: boolean; // For special right-angle paths
   }> = [
-    // Grid ↔ Grid Meter: single physical connection, lines depart from middle
-    { from: "grid", to: "gridMeter", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
-    { from: "gridMeter", to: "grid", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
+    // Grid ↔ Grid Meter:
+    // 1) grid -> gridMeter: 40% from top of both boxes (offset "left" = 40%)
+    { from: "grid", to: "gridMeter", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
+    // 2) gridMeter -> grid: 60% from top of both boxes (offset "right" = 60%)
+    { from: "gridMeter", to: "grid", sideFrom: "left", sideTo: "right", offsetFrom: "right", offsetTo: "right" },
     
     // Grid Meter ↔ Inverter: 2 possible connections – depart from 40% and 60% of height
     { from: "gridMeter", to: "inverter", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
