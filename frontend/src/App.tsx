@@ -29,22 +29,49 @@ function formatHours(seconds: number): string {
   return `${h}h`;
 }
 
+interface ConsumptionData {
+  time: string;
+  building_kw: number;
+  grid_kw: number;
+  power_kw: number;
+  solar_kw: number;
+  active_paths: string[];
+  path_definitions: Array<{
+    path_id: string;
+    from: string;
+    to: string;
+    color: string;
+    description: string;
+  }>;
+  labels: {
+    building?: string;
+    grid?: string;
+    gridMeter?: string;
+    inverter?: string;
+    solar?: string;
+    battery?: string;
+  };
+}
+
 export function App() {
   const [tab, setTab] = useState<"overview" | "equipment" | "analytics">("overview");
   const [overview, setOverview] = useState<Overview | null>(null);
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
+  const [consumptionData, setConsumptionData] = useState<ConsumptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const { snapshot, status: wsStatus } = useLiveData();
 
   useEffect(() => {
     async function load() {
       try {
-        const [ov, eq] = await Promise.all([
+        const [ov, eq, consumption] = await Promise.all([
           fetchJSON<Overview>("/api/overview"),
           fetchJSON<EquipmentItem[]>("/api/equipment"),
+          fetchJSON<ConsumptionData>("/api/consumption-data").catch(() => null),
         ]);
         setOverview(ov);
         setEquipment(eq);
+        setConsumptionData(consumption);
       } catch (e) {
         console.error(e);
       } finally {
@@ -132,7 +159,12 @@ export function App() {
                 grid_kw: overview.grid_kw,
                 load_kw: overview.load_kw,
                 battery_soc_percent: overview.battery_soc_percent,
+                timestamp: overview.timestamp,
               } : null}
+              activePaths={consumptionData?.active_paths}
+              pathDefinitions={consumptionData?.path_definitions}
+              labels={consumptionData?.labels}
+              displayTime={consumptionData?.time}
             />
           </div>
         )}

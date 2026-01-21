@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Snapshot } from "../hooks/useLiveData";
 
 interface EnergyFlowDiagramProps {
@@ -9,7 +9,29 @@ interface EnergyFlowDiagramProps {
     grid_kw: number;
     load_kw: number;
     battery_soc_percent: number;
+    timestamp?: string;
   } | null;
+  // Path data from Excel: which paths are active (PATH 1, PATH 2, PATH 3)
+  activePaths?: string[]; // e.g., ["PATH 1", "PATH 2"]
+  // Path definitions from Excel table N3:R9
+  pathDefinitions?: Array<{
+    path_id: string;
+    from: string;
+    to: string;
+    color: string;
+    description: string;
+  }>;
+  // Labels for boxes from Excel
+  labels?: {
+    building?: string;
+    grid?: string;
+    gridMeter?: string;
+    inverter?: string;
+    solar?: string;
+    battery?: string;
+  };
+  // Time to display (from Excel table)
+  displayTime?: string;
 }
 
 interface EnergyFlow {
@@ -28,7 +50,26 @@ const flowColors = {
   inactive: "rgba(148, 163, 184, 0.3)", // Gray - inactive
 };
 
-export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps) {
+// Path definitions from Excel table N3:R9
+// Each path defines which connection should be active and what color
+interface PathDefinition {
+  pathId: string;
+  from: string;
+  to: string;
+  color: string;
+}
+
+// Define paths based on Excel table structure
+// This will be populated from the Excel data
+const pathDefinitions: PathDefinition[] = [
+  // These will be defined based on Excel table N3:R9
+  // Example structure:
+  // { pathId: "PATH 1", from: "solar", to: "inverter", color: flowColors.solar },
+  // { pathId: "PATH 2", from: "inverter", to: "battery", color: flowColors.solar },
+  // etc.
+];
+
+export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDefinitions = [], labels, displayTime }: EnergyFlowDiagramProps) {
   // Calculate power values in kW
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
@@ -185,25 +226,30 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
   const boxWidth = 140;
   const boxHeight = 100;
 
-  // Layout matching PowerPoint diagram
-  // Building directly above inverter, Solar directly below inverter, Battery beside inverter
+  // Layout matching PowerPoint diagram exactly
+  // Building directly above inverter, Solar directly below inverter
+  // Spacing: Grid Meter to Inverter = Inverter to Battery
+  const gridMeterX = 300;
+  const inverterX = 500;
+  const batteryX = inverterX + (inverterX - gridMeterX); // Equal spacing: 500 + (500-300) = 700
+  
   const positions = {
     building: { x: 500, y: 50 },  // Directly above inverter
     grid: { x: 100, y: 200 },
-    gridMeter: { x: 300, y: 200 },
-    inverter: { x: 500, y: 200 },  // Center
+    gridMeter: { x: gridMeterX, y: 200 },
+    inverter: { x: inverterX, y: 200 },  // Center
     solar: { x: 500, y: 350 },    // Directly below inverter
-    battery: { x: 650, y: 200 },  // Beside inverter (to the right)
+    battery: { x: batteryX, y: 200 },  // Equal spacing from inverter
   };
 
   // Define ALL possible interconnections (always visible)
-  // Connection rules:
-  // 1. Grid ↔ Grid Meter
-  // 2. Grid Meter ↔ Inverter
-  // 3. Solar → Inverter (vertical, uses 40%/60% offsets)
-  // 4. Battery ↔ Inverter (horizontal)
-  // 5. Building ↔ Inverter (vertical, uses 40%/60% offsets)
-  // 6. Building ↔ Grid Meter (vertical, uses 40%/60% offsets)
+  // Exact layout per PowerPoint:
+  // 1. Grid ↔ Grid Meter: 2 horizontal lines
+  // 2. Grid Meter ↔ Inverter: 2 horizontal lines  
+  // 3. Inverter ↔ Battery: 3 horizontal lines
+  // 4. Solar ↔ Inverter: 1 vertical line (center to center)
+  // 5. Inverter ↔ Building: 2 vertical lines (with 40%/60% offsets)
+  // 6. Grid Meter ↔ Building: 1 right-angle line (top of grid meter to left of building)
   type Side = "top" | "bottom" | "left" | "right";
   type Offset = "left" | "right" | "center";
   const staticConnections: Array<{
@@ -213,32 +259,32 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
     sideTo: Side;
     offsetFrom?: Offset;
     offsetTo?: Offset;
+    isRightAngle?: boolean; // For special right-angle paths
   }> = [
-    // Grid ↔ Grid Meter (horizontal)
-    { from: "grid", to: "gridMeter", sideFrom: "right", sideTo: "left" },
-    { from: "gridMeter", to: "grid", sideFrom: "left", sideTo: "right" },
+    // Grid ↔ Grid Meter: 2 horizontal lines
+    { from: "grid", to: "gridMeter", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
+    { from: "gridMeter", to: "grid", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
     
-    // Grid Meter ↔ Inverter (horizontal)
-    { from: "gridMeter", to: "inverter", sideFrom: "right", sideTo: "left" },
-    { from: "inverter", to: "gridMeter", sideFrom: "left", sideTo: "right" },
+    // Grid Meter ↔ Inverter: 2 horizontal lines
+    { from: "gridMeter", to: "inverter", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
+    { from: "inverter", to: "gridMeter", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
     
-    // Solar → Inverter (vertical: solar top 40%, inverter bottom 40%)
-    // Bottom box (solar) connects at 40% of width, upper box (inverter) connects at 60% of width
-    { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "left" },
+    // Inverter ↔ Battery: 3 horizontal lines
+    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
+    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
+    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" }, // Third line
     
-    // Battery ↔ Inverter (horizontal)
-    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right" },
-    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left" },
+    // Solar ↔ Inverter: 1 vertical line (center to center)
+    { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom", offsetFrom: "center", offsetTo: "center" },
     
-    // Building ↔ Inverter (vertical: building bottom 40%, inverter top 60%)
-    // Lower box (building) bottom at 40%, upper box (inverter) top at 60%
+    // Inverter ↔ Building: 2 vertical lines (with 40%/60% offsets)
+    // Line 1: building bottom 40%, inverter top 60%
     { from: "building", to: "inverter", sideFrom: "bottom", sideTo: "top", offsetFrom: "left", offsetTo: "right" },
-    // Building ↔ Inverter (vertical: building bottom 60%, inverter top 40%)
+    // Line 2: building bottom 60%, inverter top 40%
     { from: "inverter", to: "building", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "right" },
     
-    // Building ↔ Grid Meter (vertical: building bottom 60%, grid meter top 40%)
-    { from: "building", to: "gridMeter", sideFrom: "bottom", sideTo: "top", offsetFrom: "right", offsetTo: "left" },
-    { from: "gridMeter", to: "building", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "right" },
+    // Grid Meter ↔ Building: 1 right-angle line (top of grid meter to left of building)
+    { from: "gridMeter", to: "building", sideFrom: "top", sideTo: "left", offsetFrom: "center", offsetTo: "center", isRightAngle: true },
   ];
 
   // Calculate connection points
@@ -281,7 +327,15 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
   // Create right-angled path (always right-angled)
   // For vertical connections: go up/down first (90 deg), then horizontal
   // For horizontal connections: go horizontal first, then vertical
-  const createRightAnglePath = (from: { x: number; y: number }, to: { x: number; y: number }, fromSide: Side, toSide: Side): string => {
+  // Special case: right-angle from top to left (Grid Meter to Building)
+  const createRightAnglePath = (from: { x: number; y: number }, to: { x: number; y: number }, fromSide: Side, toSide: Side, isRightAngle?: boolean): string => {
+    // Special right-angle path: from top to left (e.g., Grid Meter top to Building left)
+    if (isRightAngle && fromSide === "top" && toSide === "left") {
+      // Go straight up from grid meter top, then horizontal to building left
+      const midY = from.y - 50; // Go up 50px first
+      const midX = to.x; // Then horizontal to building's X
+      return `M ${from.x} ${from.y} L ${from.x} ${midY} L ${midX} ${midY} L ${to.x} ${to.y}`;
+    }
     // Determine intermediate point for right angle
     let midX = from.x;
     let midY = from.y;
@@ -322,28 +376,80 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
     return `M ${from.x} ${from.y} L ${midX} ${midY} L ${to.x} ${to.y}`;
   };
 
+  // Animated time display - updates every second
+  const [currentTime, setCurrentTime] = useState<string>("");
+  
+  useEffect(() => {
+    const updateTime = () => {
+      if (displayTime) {
+        setCurrentTime(displayTime);
+      } else {
+        // Use snapshot or overview timestamp
+        const ts = snapshot?.timestamp || overview?.timestamp;
+        if (ts) {
+          const date = new Date(ts);
+          setCurrentTime(date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+        } else {
+          const now = new Date();
+          setCurrentTime(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+        }
+      }
+    };
+    
+    updateTime();
+    const interval = setInterval(updateTime, 1000); // Update every second
+    
+    return () => clearInterval(interval);
+  }, [displayTime, snapshot?.timestamp, overview?.timestamp]);
+
   return (
     <div className="bg-slate-800/60 rounded-lg p-6 overflow-x-auto">
-      <div className="text-xs uppercase text-slate-400 mb-4">Energy Flow</div>
+      <div className="flex items-center gap-4 mb-4">
+        {/* Animated time display in top left */}
+        {currentTime && (
+          <div className="text-base font-semibold text-slate-300 font-mono">{currentTime}</div>
+        )}
+        <div className="text-base font-semibold uppercase text-slate-300">Energy Flow</div>
+      </div>
       <div className="relative" style={{ width: "700px", height: "450px", margin: "0 auto" }}>
         <svg width="700" height="450" className="absolute inset-0">
           {/* All static interconnection lines (always visible, gray when inactive) */}
           {staticConnections.map((conn, idx) => {
             const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom);
             const toPoint = getConnectionPoint(conn.to, conn.sideTo, conn.offsetTo);
-            const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo);
+            const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo, conn.isRightAngle);
             
-            // Check if there's an active flow on this connection
-            const activeFlow = flows.find(
-              f => f.from === conn.from && f.to === conn.to
-            );
+            // Check if this path is active based on Excel path definitions
+            let isPathActive = false;
+            let pathColor = flowColors.inactive;
+            
+            if (activePaths.length > 0 && pathDefinitions.length > 0) {
+              // Find matching path definition
+              const matchingPath = pathDefinitions.find(pd => 
+                activePaths.includes(pd.path_id) &&
+                pd.from.toLowerCase() === conn.from.toLowerCase() &&
+                pd.to.toLowerCase() === conn.to.toLowerCase()
+              );
+              
+              if (matchingPath) {
+                isPathActive = true;
+                // Parse color from Excel (could be color name or RGB)
+                pathColor = matchingPath.color || flowColors.solar;
+              }
+            } else {
+              // Fallback to calculated flows if no Excel data
+              const activeFlow = flows.find(
+                f => f.from === conn.from && f.to === conn.to
+              );
+              isPathActive = activeFlow !== undefined;
+            }
             
             return (
               <path
                 key={`static-${conn.from}-${conn.to}-${idx}`}
                 d={path}
                 fill="none"
-                stroke={activeFlow ? "transparent" : flowColors.inactive}
+                stroke={isPathActive ? "transparent" : flowColors.inactive}
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -351,8 +457,72 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
             );
           })}
           
-          {/* Active energy flow lines (colored based on source) */}
-          {flows.map((flow, idx) => {
+          {/* Active energy flow lines (colored based on Excel path definitions) */}
+          {(() => {
+            // If we have path definitions from Excel, use those instead of calculated flows
+            if (activePaths.length > 0 && pathDefinitions.length > 0) {
+              return activePaths.flatMap(pathId => {
+                const pathDefs = pathDefinitions.filter(pd => pd.path_id === pathId);
+                return pathDefs.map((pathDef, idx) => {
+                  // Find the connection for this path
+                  const conn = staticConnections.find(
+                    c => c.from.toLowerCase() === pathDef.from.toLowerCase() &&
+                         c.to.toLowerCase() === pathDef.to.toLowerCase()
+                  );
+                  
+                  if (!conn) return null;
+                  
+                  const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom);
+                  const toPoint = getConnectionPoint(conn.to, conn.sideTo, conn.offsetTo);
+                  const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo, conn.isRightAngle);
+                  
+                  // Parse color (could be color name, RGB, or hex)
+                  let flowColor = pathDef.color || flowColors.solar;
+                  if (flowColor.startsWith('rgb')) {
+                    // Already RGB format
+                  } else if (flowColor.toLowerCase() === 'yellow' || flowColor.toLowerCase() === 'orange') {
+                    flowColor = flowColors.solar;
+                  } else if (flowColor.toLowerCase() === 'green') {
+                    flowColor = flowColors.battery;
+                  } else if (flowColor.toLowerCase() === 'red') {
+                    flowColor = flowColors.grid;
+                  }
+                  
+                  return (
+                    <g key={`path-${pathId}-${idx}`}>
+                      <path
+                        d={path}
+                        fill="none"
+                        stroke={flowColor}
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        opacity="1"
+                        style={{
+                          filter: `drop-shadow(0 0 2px ${flowColor})`,
+                        }}
+                      />
+                      <circle
+                        r="4"
+                        fill={flowColor}
+                        style={{
+                          filter: `drop-shadow(0 0 4px ${flowColor})`,
+                        }}
+                      >
+                        <animateMotion
+                          dur="2s"
+                          repeatCount="indefinite"
+                          path={path}
+                        />
+                      </circle>
+                    </g>
+                  );
+                }).filter(Boolean);
+              });
+            }
+            
+            // Fallback to calculated flows
+            return flows.map((flow, idx) => {
             let fromPoint, toPoint, fromSide: Side, toSide: Side;
             //let offsetFrom: Offset = "center";
             //let offsetTo: Offset = "center";
@@ -452,7 +622,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
                 </circle>
               </g>
             );
-          })}
+          })})()}
         </svg>
 
         {/* Component boxes */}
@@ -467,7 +637,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           }}
         >
           <div className="text-3xl mb-1">🏢</div>
-          <div className="text-xs font-semibold text-slate-300 mb-1">Building Load</div>
+          <div className="text-xs font-semibold text-slate-300 mb-1">{labels?.building || "Building Load"}</div>
           <div className="text-sm font-mono text-slate-300">{loadKw.toFixed(1)} kW</div>
         </div>
 
@@ -482,7 +652,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           }}
         >
           <div className="text-2xl mb-1">⚡</div>
-          <div className="text-lg font-semibold text-blue-300 mb-1">GRID</div>
+          <div className="text-lg font-semibold text-blue-300 mb-1">{labels?.grid || "GRID"}</div>
           <div className={`text-sm font-mono ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>
             {gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)} kW
           </div>
@@ -502,7 +672,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           }}
         >
           <div className="text-2xl mb-1">📊</div>
-          <div className="text-lg font-semibold text-red-300 mb-1">GRID METER</div>
+          <div className="text-lg font-semibold text-red-300 mb-1">{labels?.gridMeter || "GRID METER"}</div>
           <div className={`text-sm font-mono ${gridKw >= 0 ? "text-red-300" : "text-red-300"}`}>
             {Math.abs(gridKw).toFixed(1)} kW
           </div>
@@ -519,7 +689,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           }}
         >
           <div className="text-2xl mb-1">🔄</div>
-          <div className="text-lg font-semibold text-slate-300 mb-1">INVERTER</div>
+          <div className="text-lg font-semibold text-slate-300 mb-1">{labels?.inverter || "INVERTER"}</div>
           <div className="text-xs text-slate-400">DC ↔ AC</div>
         </div>
 
@@ -534,7 +704,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           }}
         >
           <div className="text-2xl mb-1">☀️</div>
-          <div className="text-lg font-semibold text-amber-300 mb-1">SOLAR</div>
+          <div className="text-lg font-semibold text-amber-300 mb-1">{labels?.solar || "SOLAR"}</div>
           <div className="text-sm font-mono text-amber-300">{solarKw.toFixed(1)} kW</div>
         </div>
 
@@ -549,7 +719,7 @@ export function EnergyFlowDiagram({ snapshot, overview }: EnergyFlowDiagramProps
           }}
         >
           <div className="text-2xl mb-1">🔋</div>
-          <div className="text-lg font-semibold text-emerald-300 mb-1">BATTERY</div>
+          <div className="text-lg font-semibold text-emerald-300 mb-1">{labels?.battery || "BATTERY"}</div>
           <div className="text-sm font-mono text-emerald-300">
             {batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)} kW
           </div>
