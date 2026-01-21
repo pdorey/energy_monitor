@@ -16,12 +16,29 @@ from fastapi.staticfiles import StaticFiles
 from .models import Overview, EquipmentItem, AnalyticsResponse, Snapshot
 from .simulator import Simulator
 
-# Data file paths (CSV) - work both in local dev and inside Docker
-# We base everything on the location of this file:
-#   - In local dev:   <repo>/backend/app/main.py  -> ROOT_DIR = <repo>
-#   - In Docker:      /app/app/main.py           -> ROOT_DIR = /app
-HERE = os.path.dirname(__file__)
-ROOT_DIR = os.path.abspath(os.path.join(HERE, "..", ".."))
+
+def _resolve_root_dir() -> str:
+    """
+    Resolve project root so CSVs can be found both locally and in Docker.
+
+    Layouts we support:
+    - Local dev:   <repo>/backend/app/main.py  -> ROOT_DIR = <repo>
+    - Docker:      /app/app/main.py           -> ROOT_DIR = /app
+    """
+    here = os.path.dirname(__file__)
+    candidates = [
+        os.path.abspath(os.path.join(here, "..", "..")),  # repo root in local dev
+        os.path.abspath(os.path.join(here, "..")),        # /app in Docker
+        os.getcwd(),                                      # fallback: current working directory
+    ]
+    for candidate in candidates:
+        if os.path.exists(os.path.join(candidate, "Consumption.csv")):
+            return candidate
+    # Fallback to first guess even if the file isn't there (will surface in logs)
+    return candidates[0]
+
+
+ROOT_DIR = _resolve_root_dir()
 CONSUMPTION_CSV = os.path.join(ROOT_DIR, "Consumption.csv")
 PATHS_CSV = os.path.join(ROOT_DIR, "Paths.csv")
 
