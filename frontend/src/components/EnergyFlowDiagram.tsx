@@ -540,15 +540,30 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
                   const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo, conn.isRightAngle);
                   
                   // Parse color (could be color name, RGB, or hex)
+                  // Use lineColor from pathDef, which comes from Paths.csv lineColor column
                   let flowColor = pathDef.color || flowColors.solar;
-                  if (flowColor.startsWith('rgb')) {
-                    // Already RGB format
-                  } else if (flowColor.toLowerCase() === 'yellow' || flowColor.toLowerCase() === 'orange') {
-                    flowColor = flowColors.solar;
-                  } else if (flowColor.toLowerCase() === 'green') {
-                    flowColor = flowColors.battery;
-                  } else if (flowColor.toLowerCase() === 'red') {
-                    flowColor = flowColors.grid;
+                  if (flowColor.startsWith('rgb') || flowColor.startsWith('#')) {
+                    // Already RGB or hex format
+                  } else {
+                    const colorLower = flowColor.toLowerCase();
+                    if (colorLower === 'yellow' || colorLower === 'orange') {
+                      flowColor = flowColors.solar;
+                    } else if (colorLower === 'green') {
+                      flowColor = flowColors.battery;
+                    } else if (colorLower === 'red' || colorLower === 'blue') {
+                      // Blue is used for grid in some paths, but should render as red
+                      flowColor = flowColors.grid;
+                    } else {
+                      // Fallback: use source to determine color
+                      const source = (pathDef.source || "").toLowerCase();
+                      if (source.includes("solar")) {
+                        flowColor = flowColors.solar;
+                      } else if (source.includes("battery")) {
+                        flowColor = flowColors.battery;
+                      } else if (source.includes("grid")) {
+                        flowColor = flowColors.grid;
+                      }
+                    }
                   }
                   
                   return (
@@ -701,10 +716,12 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         >
           <div className="flex items-center gap-1 mb-1">
             <div className="text-xl">🏢</div>
-            <div className="text-xs font-semibold text-slate-300">{labels?.building || "Building Load"}</div>
+            <div className="text-xs font-semibold text-slate-300">Building Load</div>
           </div>
-          <div className="text-sm font-mono text-slate-300">{loadKw.toFixed(1)} kW</div>
-          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.building ? "" : "\u00A0"}</div>
+          <div className="text-sm font-mono text-slate-300">
+            {loadKw.toFixed(1)}{loadKw !== 0 ? " kW" : ""}
+          </div>
+          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.building || "\u00A0"}</div>
         </div>
 
         {/* Grid */}
@@ -719,10 +736,10 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         >
           <div className="flex items-center gap-1 mb-1">
             <div className="text-xl">⚡</div>
-            <div className="text-xs font-semibold text-blue-300">{labels?.grid || "GRID"}</div>
+            <div className="text-xs font-semibold text-blue-300">GRID</div>
           </div>
           <div className={`text-sm font-mono ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>
-            {gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)} kW
+            {gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)}{gridKw !== 0 ? " kW" : ""}
           </div>
           <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.grid || "\u00A0"}</div>
         </div>
@@ -739,10 +756,10 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         >
           <div className="flex items-center gap-1 mb-1">
             <div className="text-xl">📊</div>
-            <div className="text-xs font-semibold text-red-300">{labels?.gridMeter || "GRID METER"}</div>
+            <div className="text-xs font-semibold text-red-300">GRID METER</div>
           </div>
           <div className="text-sm font-mono text-red-300">
-            {Math.abs(gridKw).toFixed(1)} kW
+            {Math.abs(gridKw).toFixed(1)}{Math.abs(gridKw) !== 0 ? " kW" : ""}
           </div>
           <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.gridMeter || "\u00A0"}</div>
         </div>
@@ -759,9 +776,9 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         >
           <div className="flex items-center gap-1 mb-1">
             <div className="text-xl">🔄</div>
-            <div className="text-xs font-semibold text-slate-300">{labels?.inverter || "INVERTER"}</div>
+            <div className="text-xs font-semibold text-slate-300">INVERTER</div>
           </div>
-          <div className="text-sm font-mono text-slate-300">— kW</div>
+          <div className="text-sm font-mono text-slate-300">—</div>
           <div className="text-xs text-slate-400 min-h-[1rem]">DC ↔ AC</div>
         </div>
 
@@ -777,9 +794,11 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         >
           <div className="flex items-center gap-1 mb-1">
             <div className="text-xl">☀️</div>
-            <div className="text-xs font-semibold text-amber-300">{labels?.solar || "SOLAR"}</div>
+            <div className="text-xs font-semibold text-amber-300">SOLAR</div>
           </div>
-          <div className="text-sm font-mono text-amber-300">{solarKw.toFixed(1)} kW</div>
+          <div className="text-sm font-mono text-amber-300">
+            {solarKw.toFixed(1)}{solarKw !== 0 ? " kW" : ""}
+          </div>
           <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.solar || "\u00A0"}</div>
         </div>
 
@@ -795,10 +814,10 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         >
           <div className="flex items-center gap-1 mb-1">
             <div className="text-xl">🔋</div>
-            <div className="text-xs font-semibold text-emerald-300">{labels?.battery || "BATTERY"}</div>
+            <div className="text-xs font-semibold text-emerald-300">BATTERY</div>
           </div>
           <div className="text-sm font-mono text-emerald-300">
-            {batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)} kW
+            {batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)}{batteryKw !== 0 ? " kW" : ""}
           </div>
           <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.battery || "\u00A0"}</div>
           <div className="text-xs text-slate-400">{soc.toFixed(0)}% SOC</div>
