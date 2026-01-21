@@ -77,6 +77,53 @@ async def health():
     return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
+@app.get("/api/debug")
+async def debug_info():
+    """
+    Diagnostic endpoint to check CSV loading and simulator state.
+    Useful for debugging path issues in Docker.
+    """
+    info = {
+        "paths": {
+            "root_dir": ROOT_DIR,
+            "consumption_csv": CONSUMPTION_CSV,
+            "paths_csv": PATHS_CSV,
+            "static_dir": STATIC_DIR,
+        },
+        "files_exist": {
+            "consumption_csv": os.path.exists(CONSUMPTION_CSV),
+            "paths_csv": os.path.exists(PATHS_CSV),
+            "static_dir": os.path.isdir(STATIC_DIR),
+        },
+        "simulator": {
+            "initialized": sim is not None,
+        },
+    }
+
+    if sim:
+        # Access private attributes for diagnostics
+        info["simulator"]["row_count"] = getattr(sim, "_row_count", 0)
+        info["simulator"]["current_index"] = getattr(sim, "_index", 0)
+        info["simulator"]["last_index"] = getattr(sim, "_last_index", 0)
+        info["simulator"]["battery_soc"] = getattr(sim, "battery_soc", None)
+
+        # Try to get current row
+        current_row = sim.get_current_row()
+        if current_row:
+            info["simulator"]["current_row_sample"] = {
+                "time": current_row.get("TIME", ""),
+                "building_load_pwr": current_row.get("BUILDING LOAD PWR", ""),
+                "grid_pwr": current_row.get("GRID PWR", ""),
+                "solar_pwr": current_row.get("SOLAR PWR", ""),
+                "battery_pwr": current_row.get("BATTERY PWR", ""),
+                "battery_soc": current_row.get("BATTERY SOC", ""),
+            }
+        else:
+            info["simulator"]["current_row_sample"] = None
+
+    return info
+
+
 @app.get("/api/overview", response_model=Overview)
 async def api_overview():
     if not sim:

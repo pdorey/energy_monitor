@@ -43,13 +43,19 @@ class Simulator:
         root_dir = os.path.abspath(os.path.join(here, "..", ".."))
         consumption_csv = os.path.join(root_dir, "Consumption.csv")
         self._rows: list[dict] = []
+        self._csv_path = consumption_csv  # Store for diagnostics
+        
         if os.path.exists(consumption_csv):
             try:
-                with open(consumption_csv, newline="") as f:
+                with open(consumption_csv, newline="", encoding="utf-8") as f:
                     reader = csv.DictReader(f)
                     self._rows = [row for row in reader if any(row.values())]
-            except Exception:
+                print(f"[Simulator] Loaded {len(self._rows)} rows from {consumption_csv}")
+            except Exception as e:
+                print(f"[Simulator] ERROR loading CSV from {consumption_csv}: {e}")
                 self._rows = []
+        else:
+            print(f"[Simulator] WARNING: Consumption.csv not found at {consumption_csv}")
 
         self._row_count = len(self._rows)
         self._index = 0  # current row index (0..row_count-1)
