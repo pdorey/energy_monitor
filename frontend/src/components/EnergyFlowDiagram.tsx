@@ -420,8 +420,8 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo, conn.isRightAngle);
             
             // Check if this path is active based on Excel path definitions
-            let isPathActive = false;
-            let pathColor = flowColors.inactive;
+            let isPathActive: boolean = false;
+            let pathColor: string = flowColors.inactive;
             
             if (activePaths.length > 0 && pathDefinitions.length > 0) {
               // Find matching path definition
