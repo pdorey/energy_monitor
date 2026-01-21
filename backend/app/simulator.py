@@ -54,7 +54,7 @@ class Simulator:
         self._last_index = 0  # last row index used for snapshot
 
         # Initial SOC from first row if available, otherwise default
-        self.battery_soc = 95.0
+        self.battery_soc = 91.0
         if self._row_count:
             soc_raw = (self._rows[0].get("BATTERY SOC") or "").strip()
             if soc_raw.endswith("%"):
