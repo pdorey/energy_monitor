@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import json
 import os
 from contextlib import asynccontextmanager
@@ -15,8 +16,11 @@ from fastapi.staticfiles import StaticFiles
 from .models import Overview, EquipmentItem, AnalyticsResponse, Snapshot
 from .simulator import Simulator
 
-# Excel file path
-EXCEL_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "Consumption.xlsx")
+# Data file paths (CSV)
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+ROOT_DIR = os.path.join(BASE_DIR, "..")
+CONSUMPTION_CSV = os.path.join(ROOT_DIR, "Consumption.csv")
+PATHS_CSV = os.path.join(ROOT_DIR, "Paths.csv")
 
 
 sim: Simulator | None = None
@@ -48,7 +52,6 @@ app.add_middleware(
 )
 
 # static SPA (built frontend)
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "frontend_dist")
 if os.path.isdir(STATIC_DIR):
     # Mount static files directory - this will serve assets, images, etc.
@@ -97,120 +100,135 @@ async def api_analytics(hours: int = 24, resolution: int = 60):
 
 @app.get("/api/consumption-data")
 async def get_consumption_data():
-    """Read consumption data from Excel file and return current row data"""
+    """Read consumption and path data from CSV files and return current row data."""
     try:
-        import openpyxl
-        from datetime import datetime, timedelta
-        
-        if not os.path.exists(EXCEL_FILE):
-            return {"error": "Consumption.xlsx not found"}
-        
-        wb = openpyxl.load_workbook(EXCEL_FILE, data_only=True)
-        ws = wb.active
-        
-        # Read path definitions from N3:R9 (columns N=14, O=15, P=16, Q=17, R=18)
-        path_definitions = []
-        for row_num in range(3, 10):  # Rows 3 to 9
-            path_id = ws.cell(row=row_num, column=14).value  # Column N
-            if path_id:
-                path_definitions.append({
-                    "path_id": str(path_id),
-                    "from": str(ws.cell(row=row_num, column=15).value or "").lower(),  # Column O
-                    "to": str(ws.cell(row=row_num, column=16).value or "").lower(),  # Column P
-                    "color": str(ws.cell(row=row_num, column=17).value or ""),  # Column Q
-                    "description": str(ws.cell(row=row_num, column=18).value or ""),  # Column R
-                })
-        
-        # Find current time based on simulator (24 hours compressed to 2 minutes)
-        # Calculate which 15-minute interval we're in
+        if not os.path.exists(CONSUMPTION_CSV):
+            return {"error": "Consumption.csv not found"}
+
+        # Load all consumption rows (15 minute intervals)
+        with open(CONSUMPTION_CSV, newline="") as f:
+            reader = csv.DictReader(f)
+            consumption_rows = [row for row in reader if any(row.values())]
+
+        if not consumption_rows:
+            return {"error": "Consumption.csv has no data"}
+
+        # Determine current simulated interval (24h compressed into 2 minutes)
         if sim:
             elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
             # 24 hours = 86400 seconds, compressed to 120 seconds (2 minutes)
             # So 1 second real time = 720 seconds simulated time
-            simulated_seconds = elapsed * 720
-            # Find which 15-minute interval (0-95 intervals in 24 hours)
-            interval = int(simulated_seconds / 900) % 96  # 900 seconds = 15 minutes
+            simulated_seconds = elapsed * 720.0
+            # 900 seconds = 15 minutes
+            interval = int(simulated_seconds / 900.0) % len(consumption_rows)
         else:
             interval = 0
-        
-        # Find data row (assuming data starts at row 2, with row 1 as header)
-        # Adjust based on actual Excel structure
-        data_start_row = 2
-        current_row = data_start_row + interval
-        
-        # Read data row - adjust column indices based on actual Excel structure
-        # Try to find columns by header names
-        header_row = 1
-        col_map = {}
-        for col in range(1, 30):  # Check first 30 columns
-            header = ws.cell(row=header_row, column=col).value
-            if header:
-                header_lower = str(header).lower()
-                if "time" in header_lower:
-                    col_map["time"] = col
-                elif "building" in header_lower:
-                    col_map["building"] = col
-                elif "grid" in header_lower and "meter" not in header_lower:
-                    col_map["grid"] = col
-                elif "power" in header_lower:
-                    col_map["power"] = col
-                elif "solar" in header_lower:
-                    col_map["solar"] = col
-                elif "path 1" in header_lower or header_lower == "path1":
-                    col_map["path1"] = col
-                elif "path 2" in header_lower or header_lower == "path2":
-                    col_map["path2"] = col
-                elif "path 3" in header_lower or header_lower == "path3":
-                    col_map["path3"] = col
-        
-        # Read values using column map
-        time_value = ""
-        if "time" in col_map:
-            time_cell = ws.cell(row=current_row, column=col_map["time"])
-            if time_cell.value:
-                if isinstance(time_cell.value, datetime):
-                    time_value = time_cell.value.strftime("%H:%M")
-                else:
-                    time_value = str(time_cell.value)
-        
-        building_kw = ws.cell(row=current_row, column=col_map.get("building", 2)).value or 0
-        grid_kw = ws.cell(row=current_row, column=col_map.get("grid", 3)).value or 0
-        power_kw = ws.cell(row=current_row, column=col_map.get("power", 4)).value or 0
-        solar_kw = ws.cell(row=current_row, column=col_map.get("solar", 5)).value or 0
-        
-        # Read active paths
-        active_paths = []
-        if "path1" in col_map:
-            path1 = ws.cell(row=current_row, column=col_map["path1"]).value
-            if path1:
-                active_paths.append(str(path1))
-        if "path2" in col_map:
-            path2 = ws.cell(row=current_row, column=col_map["path2"]).value
-            if path2:
-                active_paths.append(str(path2))
-        if "path3" in col_map:
-            path3 = ws.cell(row=current_row, column=col_map["path3"]).value
-            if path3:
-                active_paths.append(str(path3))
-        
-        # Read labels (if present in Excel)
-        labels = {}
-        # This will be populated based on actual Excel structure
-        
+
+        row = consumption_rows[interval]
+
+        # Parse core metrics
+        time_value = (row.get("TIME") or "").strip()
+
+        def parse_float(field: str) -> float:
+            val = (row.get(field) or "").strip()
+            try:
+                return float(val) if val else 0.0
+            except ValueError:
+                return 0.0
+
+        building_kw = parse_float("BUILDING LOAD PWR")
+        grid_kw = parse_float("GRID PWR")
+        power_kw = building_kw  # alias, if needed
+        solar_kw = parse_float("SOLAR PWR")
+
+        # Active paths (PATH 1, PATH 2, PATH 3)
+        active_paths: list[str] = []
+        for col in ("PATH 1", "PATH 2", "PATH 3"):
+            val = (row.get(col) or "").strip()
+            if val:
+                active_paths.append(str(val))
+
+        # Labels for boxes
+        labels = {
+            "building": (row.get("BUILDING LOAD LABEL") or "").strip() or None,
+            "grid": (row.get("GRID LABEL") or "").strip() or None,
+            "battery": (row.get("BATTERY LABEL") or "").strip() or None,
+            "solar": (row.get("SOLAR LABEL") or "").strip() or None,
+        }
+
+        # Load path definitions from Paths.csv
+        path_definitions: list[dict] = []
+        if os.path.exists(PATHS_CSV):
+            with open(PATHS_CSV, newline="") as f:
+                reader = csv.DictReader(f)
+
+                def map_node(name: str) -> str:
+                    n = name.strip().upper()
+                    if n == "GRID":
+                        return "grid"
+                    if n == "GRID METER":
+                        return "gridMeter"
+                    if n == "INVERTER":
+                        return "inverter"
+                    if n == "BATTERY":
+                        return "battery"
+                    if n == "BUILDING":
+                        return "building"
+                    if n == "SOLAR":
+                        return "solar"
+                    return n.lower()
+
+                for prow in reader:
+                    path_id = (prow.get("PATHS") or "").strip()
+                    if not path_id:
+                        continue
+
+                    steps = [
+                        (prow.get("Step 1") or "").strip(),
+                        (prow.get("Step 2") or "").strip(),
+                        (prow.get("Step 3") or "").strip(),
+                        (prow.get("Step 4") or "").strip(),
+                    ]
+                    steps = [s for s in steps if s]
+                    if len(steps) < 2:
+                        continue
+
+                    # Color based on source node (first step)
+                    source = steps[0].strip().upper()
+                    if source == "GRID":
+                        color = "red"
+                    elif source == "SOLAR":
+                        color = "yellow"
+                    elif source == "BATTERY":
+                        color = "green"
+                    else:
+                        color = "white"
+
+                    description = " → ".join(steps)
+                    for i in range(len(steps) - 1):
+                        path_definitions.append(
+                            {
+                                "path_id": str(path_id),
+                                "from": map_node(steps[i]),
+                                "to": map_node(steps[i + 1]),
+                                "color": color,
+                                "description": description,
+                            }
+                        )
+
         return {
             "time": time_value,
-            "building_kw": float(building_kw) if building_kw else 0,
-            "grid_kw": float(grid_kw) if grid_kw else 0,
-            "power_kw": float(power_kw) if power_kw else 0,
-            "solar_kw": float(solar_kw) if solar_kw else 0,
+            "building_kw": building_kw,
+            "grid_kw": grid_kw,
+            "power_kw": power_kw,
+            "solar_kw": solar_kw,
             "active_paths": active_paths,
             "path_definitions": path_definitions,
             "labels": labels,
         }
-    except ImportError:
-        return {"error": "openpyxl not installed"}
     except Exception as e:
         import traceback
+
         return {"error": str(e), "traceback": traceback.format_exc()}
 
 

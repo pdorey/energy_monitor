@@ -534,8 +534,8 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             // Determine connection points based on flow direction
             // Use 40%/60% offsets for vertical connections
             if (flow.from === "solar" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("solar", "top", "left"); // 40% from left
-              toPoint = getConnectionPoint("inverter", "bottom", "left"); // 40% from left
+              fromPoint = getConnectionPoint("solar", "top", "center"); // 40% from left
+              toPoint = getConnectionPoint("inverter", "bottom", "center"); // 40% from left
               fromSide = "top";
               toSide = "bottom";
             } else if (flow.from === "inverter" && flow.to === "battery") {

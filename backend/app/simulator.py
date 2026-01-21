@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import csv
 import math
+import os
 import random
 from collections import deque
 from datetime import datetime, timedelta, timezone
@@ -51,6 +53,19 @@ class Simulator:
             "grid_kw": deque(maxlen=max_points),
             "load_kw": deque(maxlen=max_points),
         }
+
+        # Pre-load consumption CSV if available
+        root_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..")
+        consumption_csv = os.path.join(root_dir, "Consumption.csv")
+        self._consumption_rows: list[dict] = []
+        if os.path.exists(consumption_csv):
+            try:
+                with open(consumption_csv, newline="") as f:
+                    reader = csv.DictReader(f)
+                    self._consumption_rows = [row for row in reader if any(row.values())]
+            except Exception:
+                # Fallback to synthetic profiles if CSV cannot be read
+                self._consumption_rows = []
 
     # --- internal helpers -------------------------------------------------
 
@@ -172,17 +187,58 @@ class Simulator:
 
     # --- public API -------------------------------------------------------
 
+    def _get_consumption_row(self, t: datetime) -> dict | None:
+        """Return the current 15-minute interval row from Consumption.csv, if loaded."""
+        if not self._consumption_rows:
+            return None
+
+        elapsed_seconds = (t - self.start_time).total_seconds()
+        simulated_seconds = elapsed_seconds * self.time_compression
+        # 900 seconds = 15 minutes
+        idx = int(simulated_seconds / 900.0) % len(self._consumption_rows)
+        return self._consumption_rows[idx]
+
     def generate_snapshot(self) -> Snapshot:
         now = datetime.now(timezone.utc)
         dt_hours = max(self.step_seconds / 3600.0, (now - self.last_update).total_seconds() / 3600.0)
         self.last_update = now
+        row = self._get_consumption_row(now)
 
-        building_load_w = self._office_load_profile_w(now)
-        pv_clear_w = self._pv_profile_w(now, self.PV_PEAK_JAN_W, self.PV_PEAK_JUN_W)
-        weather_factor = self._weather_factor(now)
-        pv_w = pv_clear_w * weather_factor
+        if row is not None:
+            # Use CSV-driven consumption data (kW in CSV, convert to W)
+            def parse_float(field: str) -> float:
+                val = (row.get(field) or "").strip()
+                try:
+                    return float(val) if val else 0.0
+                except ValueError:
+                    return 0.0
 
-        battery_w, grid_w = self._compute_battery_and_grid(building_load_w, pv_w, dt_hours, now)
+            building_load_kw = parse_float("BUILDING LOAD PWR")
+            grid_kw = parse_float("GRID PWR")
+            battery_kw = parse_float("BATTERY PWR")
+            solar_kw = parse_float("SOLAR PWR")
+
+            building_load_w = building_load_kw * 1000.0
+            grid_w = grid_kw * 1000.0
+            battery_w = battery_kw * 1000.0
+            pv_w = solar_kw * 1000.0
+
+            # Update SOC based on battery power sign
+            if battery_w != 0.0:
+                # Positive battery_w in CSV = charging, negative = discharging
+                delta_soc = (abs(battery_w) * dt_hours) / (self.BATTERY_CAPACITY_KWH * 1000.0) * 100.0
+                if battery_w > 0:
+                    self.battery_soc = min(self.BATTERY_MAX_SOC, self.battery_soc + delta_soc)
+                else:
+                    self.battery_soc = max(self.BATTERY_MIN_SOC, self.battery_soc - delta_soc)
+        else:
+            # Fallback to synthetic profiles
+            building_load_w = self._office_load_profile_w(now)
+            pv_clear_w = self._pv_profile_w(now, self.PV_PEAK_JAN_W, self.PV_PEAK_JUN_W)
+            weather_factor = self._weather_factor(now)
+            pv_w = pv_clear_w * weather_factor
+
+            battery_w, grid_w = self._compute_battery_and_grid(building_load_w, pv_w, dt_hours, now)
 
         # add a bit of noise
         def jitter(value: float, pct: float = 0.02) -> float:
@@ -191,10 +247,12 @@ class Simulator:
             d = abs(value) * pct
             return value + random.uniform(-d, d)
 
-        pv_w = max(0.0, jitter(pv_w))
-        building_load_w = max(0.0, jitter(building_load_w))
-        battery_w = jitter(battery_w)
-        grid_w = jitter(grid_w)
+        # For CSV-driven mode, we keep exact values; for synthetic mode, we add jitter.
+        if row is None:
+            pv_w = max(0.0, jitter(pv_w))
+            building_load_w = max(0.0, jitter(building_load_w))
+            battery_w = jitter(battery_w)
+            grid_w = jitter(grid_w)
 
         solar = SolarMetrics(
             power_w=pv_w,
