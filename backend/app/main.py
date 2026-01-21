@@ -16,9 +16,12 @@ from fastapi.staticfiles import StaticFiles
 from .models import Overview, EquipmentItem, AnalyticsResponse, Snapshot
 from .simulator import Simulator
 
-# Data file paths (CSV)
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-ROOT_DIR = os.path.join(BASE_DIR, "..")
+# Data file paths (CSV) - work both in local dev and inside Docker
+# We base everything on the location of this file:
+#   - In local dev:   <repo>/backend/app/main.py  -> ROOT_DIR = <repo>
+#   - In Docker:      /app/app/main.py           -> ROOT_DIR = /app
+HERE = os.path.dirname(__file__)
+ROOT_DIR = os.path.abspath(os.path.join(HERE, "..", ".."))
 CONSUMPTION_CSV = os.path.join(ROOT_DIR, "Consumption.csv")
 PATHS_CSV = os.path.join(ROOT_DIR, "Paths.csv")
 
@@ -52,7 +55,7 @@ app.add_middleware(
 )
 
 # static SPA (built frontend)
-STATIC_DIR = os.path.join(BASE_DIR, "frontend_dist")
+STATIC_DIR = os.path.join(ROOT_DIR, "frontend_dist")
 if os.path.isdir(STATIC_DIR):
     # Mount static files directory - this will serve assets, images, etc.
     app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")

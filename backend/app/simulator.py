@@ -37,8 +37,10 @@ class Simulator:
     BATTERY_CAPACITY_KWH = 400.0
 
     def __init__(self, history_hours: int = 24, step_seconds: int = 900) -> None:
-        # Load CSV once at startup
-        root_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..")
+        # Load CSV once at startup. We mirror the path logic in main.py so this
+        # works both in local dev and inside Docker.
+        here = os.path.dirname(__file__)
+        root_dir = os.path.abspath(os.path.join(here, "..", ".."))
         consumption_csv = os.path.join(root_dir, "Consumption.csv")
         self._rows: list[dict] = []
         if os.path.exists(consumption_csv):

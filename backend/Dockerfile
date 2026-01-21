@@ -10,9 +10,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/app ./app
 
-# Copy built frontend assets.
-# Note: the Docker build context must include the repository root
-# (e.g. `context: .` in docker-compose) so that `frontend_dist/` is visible.
+# Copy CSV data files into the image so the simulator and API
+# can read `Consumption.csv` and `Paths.csv` in both local and Docker.
+COPY Consumption.csv Paths.csv ./
+
+# Copy built frontend assets. The Docker build context must include
+# the repository root (e.g. `context: .` in docker-compose) so that
+# `frontend_dist/` is visible.
 COPY frontend_dist ./frontend_dist
 
 EXPOSE 8000
