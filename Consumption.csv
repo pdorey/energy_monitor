@@ -1,98 +1,98 @@
-﻿TIME,PATH 1,PATH 2,PATH 3,BUILDING LOAD PWR,BUILDING LOAD LABEL,GRID PWR,GRID LABEL,BATTERY PWR,BATTERY LABEL,SOLAR PWR,SOLAR LABEL
-00:00,6,,,7.605,Battery only,,,-7.605,Discharging,0,
-00:15,6,,,7.71,Battery only,,,-7.71,Discharging,0,
-00:30,6,,,7.065,Battery only,,,-7.065,Discharging,0,
-00:45,6,,,8.235,Battery only,,,-8.235,Discharging,0,
-01:00,6,,,7.17,Battery only,,,-7.17,Discharging,0,
-01:15,1,,,7.47,Grid only,7.47,Importing,,,0,
-01:30,1,,,7.875,Grid only,7.875,Importing,,,0,
-01:45,1,,,7.335,Grid only,7.335,Importing,,,0,
-02:00,1,,,7.395,Grid only,7.395,Importing,,,0,
-02:15,1,,,7.44,Grid only,7.44,Importing,,,0,
-02:30,1,,,7.89,Grid only,7.89,Importing,,,0,
-02:45,1,,,8.43,Grid only,8.43,Importing,,,0,
-03:00,1,,,7.74,Grid only,7.74,Importing,,,0,
-03:15,1,,,7.38,Grid only,7.38,Importing,,,0,
-03:30,1,,,7.89,Grid only,7.89,Importing,,,0,
-03:45,1,,,7.545,Grid only,7.545,Importing,,,0,
-04:00,1,,,7.725,Grid only,7.725,Importing,,,0,
-04:15,1,,,8.595,Grid only,8.595,Importing,,,0,
-04:30,1,,,8.43,Grid only,8.43,Importing,,,0,
-04:45,1,,,9.18,Grid only,9.18,Importing,,,0,
-05:00,1,,,9.315,Grid only,9.315,Importing,,,0,
-05:15,1,3,,12,Grid + solar,12,Importing,,,0.3,Active
-05:30,1,3,,14.64,Grid + solar,14.64,Importing,,,0.45,Active
-05:45,1,3,,16.23,Grid + solar,16.23,Importing,,,0.75,Active
-06:00,1,3,,19.05,Grid + solar,19.05,Importing,,,1.2,Active
-06:15,1,3,,23.235,Grid + solar,23.235,Importing,,,3.15,Active
-06:30,1,3,,26.895,Grid + solar,26.895,Importing,,,5.25,Active
-06:45,1,3,,30.225,Grid + solar,30.225,Importing,,,7.35,Active
-07:00,1,3,,33.84,Grid + solar,33.84,Importing,,,10.35,Active
-07:15,1,3,,39.765,Grid + solar,39.765,Importing,,,13.05,Active
-07:30,1,3,,43.68,Grid + solar,43.68,Importing,,,16.8,Active
-07:45,1,3,,52.605,Grid + solar,52.605,Importing,,,23.25,Active
-08:00,1,3,,47.325,Grid + solar,47.325,Importing,,,25.35,Active
-08:15,1,3,,55.44,Grid + solar,55.44,Importing,,,31.05,Active
-08:30,1,3,,58.8,Grid + solar,58.8,Importing,,,34.95,Active
-08:45,1,3,,64.005,Grid + solar,64.005,Importing,,,44.25,Active
-09:00,1,3,,64.74,Grid + solar,64.74,Importing,,,48.6,Active
-09:15,1,3,,62.655,Grid + solar,62.655,Importing,,,53.55,Active
-09:30,1,3,,66.225,Grid + solar,66.225,Importing,,,57.9,Active
-09:45,1,3,,69.075,Grid + solar,69.075,Importing,,,66.3,Active
-10:00,3,4,,68.115,Solar only,-6.735,Exporting,,,74.85,Active
-10:15,3,4,,71.82,Solar only,-0.18,Exporting,,,72,Active
-10:30,3,4,,65.1,Solar only,-24.45,Exporting,,,89.55,Active
-10:45,3,4,,75.975,Solar only,-20.625,Exporting,,,96.6,Active
-11:00,3,4,,75.96,Solar only,-8.64,Exporting,,,84.6,Active
-11:15,3,4,,70.785,Solar only,-35.565,Exporting,,,106.35,Active
-11:30,3,4,,73.5,Solar only,-45.15,Exporting,,,118.65,Active
-11:45,3,4,,71.88,Solar only,-46.32,Exporting,,,118.2,Active
-12:00,3,4,,69.36,Solar only,-58.74,Exporting,,,128.1,Active
-12:15,3,5,,71.655,Solar only,0,,58.245,Charging,129.9,Active
-12:30,3,5,,73.905,Solar only,0,,44.295,Charging,118.2,Active
-12:45,3,5,,69.63,Solar only,0,,46.92,Charging,116.55,Active
-13:00,3,5,,69.315,Solar only,0,,58.185,Charging,127.5,Active
-13:15,3,4,,69.465,Solar only,-56.235,Exporting,,,125.7,Active
-13:30,3,4,,70.185,Solar only,-43.965,Exporting,,,114.15,Active
-13:45,3,4,,71.79,Solar only,-47.61,Exporting,,,119.4,Active
-14:00,3,4,,65.895,Solar only,-53.805,Exporting,,,119.7,Active
-14:15,3,4,,68.28,Solar only,-46.17,Exporting,,,114.45,Active
-14:30,3,4,,66.795,Solar only,-44.505,Exporting,,,111.3,Active
-14:45,3,4,,60.66,Solar only,-34.14,Exporting,,,94.8,Active
-15:00,3,4,,63.765,Solar only,-26.235,Exporting,,,90,Active
-15:15,3,4,,63.48,Solar only,-22.77,Exporting,,,86.25,Active
-15:30,3,4,,62.67,Solar only,-22.83,Exporting,,,85.5,Active
-15:45,3,4,,62.55,Solar only,-20.4,Exporting,,,82.95,Active
-16:00,3,4,,55.755,Solar only,-17.895,Exporting,,,73.65,Active
-16:15,3,4,,59.43,Solar only,-4.17,Exporting,,,63.6,Active
-16:30,1,3,,56.37,Grid + solar,0.27,Importing,,,56.1,Active
-16:45,1,3,,53.31,Grid + solar,9.81,Importing,,,43.5,Active
-17:00,1,3,,56.34,Grid + solar,18.24,Importing,,,38.1,Active
-17:15,1,3,,54.33,Grid + solar,19.83,Importing,,,34.5,Active
-17:30,1,3,,49.05,Grid + solar,22.2,Importing,,,26.85,Active
-17:45,1,3,,49.56,Grid + solar,27.06,Importing,,,22.5,Active
-18:00,1,3,,44.835,Grid + solar,26.085,Importing,,,18.75,Active
-18:15,1,3,,43.23,Grid + solar,29.13,Importing,,,14.1,Active
-18:30,1,3,,38.91,Grid + solar,27.81,Importing,,,11.1,Active
-18:45,1,3,,40.71,Grid + solar,33.36,Importing,,,7.35,Active
-19:00,3,6,,32.055,Battery only,0,,-28.755,Discharging,3.3,Active
-19:15,3,6,,33.675,Battery only,0,,-31.275,Discharging,2.4,Active
-19:30,3,6,,32.61,Battery only,0,,-31.11,Discharging,1.5,Active
-19:45,3,6,,27.255,Battery only,0,,-26.355,Discharging,0.9,Active
-20:00,6,,,27.39,Battery only,0,,-27.39,Discharging,0,
-20:15,6,,,26.13,Battery only,0,,-26.13,Discharging,0,
-20:30,6,,,25.65,Battery only,0,,-25.65,Discharging,0,
-20:45,6,,,24.63,Battery only,0,,-24.63,Discharging,0,
-21:00,6,,,21.72,Battery only,0,,-21.72,Discharging,0,
-21:15,1,,,18.24,Grid only,18.24,Importing,,,0,
-21:30,1,,,17.46,Grid only,17.46,Importing,,,0,
-21:45,1,,,14.475,Grid only,14.475,Importing,,,0,
-22:00,1,2,,10.83,Grid only,60.83,Importing,50,Charging,0,
-22:15,1,2,,10.845,Grid only,60.845,Importing,50,Charging,0,
-22:30,1,2,,10.5,Grid only,60.5,Importing,50,Charging,0,
-22:45,1,2,,10.23,Grid only,60.23,Importing,50,Charging,0,
-23:00,1,,,9.735,Grid only,9.735,Importing,,,0,
-23:15,1,,,9.69,Grid only,9.69,Importing,,,0,
-23:30,1,,,8.085,Grid only,8.085,Importing,,,0,
-23:45,1,,,8.55,Grid only,8.55,Importing,,,0,
-,,,,,,,,,,,
+﻿TIME,PATH 1,PATH 2,PATH 3,BUILDING LOAD PWR,BUILDING LOAD LABEL,GRID PWR,GRID LABEL,BATTERY PWR,BATTERY LABEL,BATTERY SOC,SOLAR PWR,SOLAR LABEL
+00:00,6,,,7.605,Battery only,,,-7.605,Discharging,91%,0,
+00:15,6,,,7.71,Battery only,,,-7.71,Discharging,87%,0,
+00:30,6,,,7.065,Battery only,,,-7.065,Discharging,84%,0,
+00:45,6,,,8.235,Battery only,,,-8.235,Discharging,80%,0,
+01:00,6,,,7.17,Battery only,,,-7.17,Discharging,76%,0,
+01:15,1,,,7.47,Grid only,,,-7.47,Discharging,72%,0,
+01:30,1,,,7.875,Grid only,,,-7.875,Discharging,68%,0,
+01:45,1,,,7.335,Grid only,,,-7.335,Discharging,65%,0,
+02:00,1,,,7.395,Grid only,,,-7.395,Discharging,61%,0,
+02:15,1,,,7.44,Grid only,,,-7.44,Discharging,57%,0,
+02:30,1,,,7.89,Grid only,,,-7.89,Discharging,53%,0,
+02:45,1,,,8.43,Grid only,,,-8.43,Discharging,49%,0,
+03:00,1,,,7.74,Grid only,,,-7.74,Discharging,45%,0,
+03:15,1,,,7.38,Grid only,,,-7.38,Discharging,42%,0,
+03:30,1,,,7.89,Grid only,,,-7.89,Discharging,38%,0,
+03:45,1,,,7.545,Grid only,,,-7.545,Discharging,34%,0,
+04:00,1,,,7.725,Grid only,7.725,Importing,,,34%,0,
+04:15,1,,,8.595,Grid only,8.595,Importing,,,34%,0,
+04:30,1,,,8.43,Grid only,8.43,Importing,,,34%,0,
+04:45,1,,,9.18,Grid only,9.18,Importing,,,34%,0,
+05:00,1,,,9.315,Grid only,9.315,Importing,,,34%,0,
+05:15,1,3,,12,Grid + solar,12,Importing,,,34%,0.3,Active
+05:30,1,3,,14.64,Grid + solar,14.64,Importing,,,34%,0.45,Active
+05:45,1,3,,16.23,Grid + solar,16.23,Importing,,,34%,0.75,Active
+06:00,1,3,,19.05,Grid + solar,19.05,Importing,,,34%,1.2,Active
+06:15,1,3,,23.235,Grid + solar,23.235,Importing,,,34%,3.15,Active
+06:30,1,3,,26.895,Grid + solar,26.895,Importing,,,34%,5.25,Active
+06:45,1,3,,30.225,Grid + solar,30.225,Importing,,,34%,7.35,Active
+07:00,1,3,,33.84,Grid + solar,33.84,Importing,,,34%,10.35,Active
+07:15,1,3,,39.765,Grid + solar,39.765,Importing,,,34%,13.05,Active
+07:30,1,3,,43.68,Grid + solar,43.68,Importing,,,34%,16.8,Active
+07:45,1,3,,52.605,Grid + solar,52.605,Importing,,,34%,23.25,Active
+08:00,1,3,,47.325,Grid + solar,47.325,Importing,,,34%,25.35,Active
+08:15,1,3,,55.44,Grid + solar,55.44,Importing,,,34%,31.05,Active
+08:30,1,3,,58.8,Grid + solar,58.8,Importing,,,34%,34.95,Active
+08:45,1,3,,64.005,Grid + solar,64.005,Importing,,,34%,44.25,Active
+09:00,1,3,,64.74,Grid + solar,64.74,Importing,,,34%,48.6,Active
+09:15,1,3,,62.655,Grid + solar,62.655,Importing,,,34%,53.55,Active
+09:30,1,3,,66.225,Grid + solar,66.225,Importing,,,34%,57.9,Active
+09:45,1,3,,69.075,Grid + solar,69.075,Importing,,,34%,66.3,Active
+10:00,3,4,,68.115,Solar only,-6.735,Exporting,,,34%,74.85,Active
+10:15,3,4,,71.82,Solar only,-0.18,Exporting,,,34%,72,Active
+10:30,3,4,,65.1,Solar only,-24.45,Exporting,,,34%,89.55,Active
+10:45,3,4,,75.975,Solar only,-20.625,Exporting,,,34%,96.6,Active
+11:00,3,4,,75.96,Solar only,-8.64,Exporting,,,34%,84.6,Active
+11:15,3,4,,70.785,Solar only,-35.565,Exporting,,,34%,106.35,Active
+11:30,3,4,,73.5,Solar only,-45.15,Exporting,,,34%,118.65,Active
+11:45,3,4,,71.88,Solar only,-46.32,Exporting,,,34%,118.2,Active
+12:00,3,4,,69.36,Solar only,-58.74,Exporting,,,34%,128.1,Active
+12:15,3,5,,71.655,Solar only,0,,58.245,Charging,48%,129.9,Active
+12:30,3,5,,73.905,Solar only,0,,44.295,Charging,60%,118.2,Active
+12:45,3,5,,69.63,Solar only,0,,46.92,Charging,71%,116.55,Active
+13:00,3,5,,69.315,Solar only,0,,58.185,Charging,86%,127.5,Active
+13:15,3,4,,69.465,Solar only,0,,56.235,Charging,96%,125.7,Active
+13:30,3,4,,70.185,Solar only,-43.965,Exporting,,,96%,114.15,Active
+13:45,3,4,,71.79,Solar only,-47.61,Exporting,,,96%,119.4,Active
+14:00,3,4,,65.895,Solar only,-53.805,Exporting,,,96%,119.7,Active
+14:15,3,4,,68.28,Solar only,-46.17,Exporting,,,96%,114.45,Active
+14:30,3,4,,66.795,Solar only,-44.505,Exporting,,,96%,111.3,Active
+14:45,3,4,,60.66,Solar only,-34.14,Exporting,,,96%,94.8,Active
+15:00,3,4,,63.765,Solar only,-26.235,Exporting,,,96%,90,Active
+15:15,3,4,,63.48,Solar only,-22.77,Exporting,,,96%,86.25,Active
+15:30,3,4,,62.67,Solar only,-22.83,Exporting,,,96%,85.5,Active
+15:45,3,4,,62.55,Solar only,-20.4,Exporting,,,96%,82.95,Active
+16:00,3,4,,55.755,Solar only,-17.895,Exporting,,,96%,73.65,Active
+16:15,3,4,,59.43,Solar only,-4.17,Exporting,,,96%,63.6,Active
+16:30,1,3,,56.37,Grid + solar,0.27,Importing,,,96%,56.1,Active
+16:45,1,3,,53.31,Grid + solar,9.81,Importing,,,96%,43.5,Active
+17:00,1,3,,56.34,Grid + solar,18.24,Importing,,,96%,38.1,Active
+17:15,1,3,,54.33,Grid + solar,19.83,Importing,,,96%,34.5,Active
+17:30,1,3,,49.05,Grid + solar,22.2,Importing,,,96%,26.85,Active
+17:45,1,3,,49.56,Grid + solar,27.06,Importing,,,96%,22.5,Active
+18:00,1,3,,44.835,Grid + solar,26.085,Importing,,,96%,18.75,Active
+18:15,1,3,,43.23,Grid + solar,29.13,Importing,,,96%,14.1,Active
+18:30,1,3,,38.91,Grid + solar,27.81,Importing,,,96%,11.1,Active
+18:45,1,3,,40.71,Grid + solar,33.36,Importing,,,96%,7.35,Active
+19:00,3,6,,32.055,Battery only,0,,-28.755,Discharging,89%,3.3,Active
+19:15,3,6,,33.675,Battery only,0,,-31.275,Discharging,81%,2.4,Active
+19:30,3,6,,32.61,Battery only,0,,-31.11,Discharging,73%,1.5,Active
+19:45,3,6,,27.255,Battery only,0,,-26.355,Discharging,67%,0.9,Active
+20:00,6,,,27.39,Battery only,0,,-27.39,Discharging,60%,0,
+20:15,6,,,26.13,Battery only,0,,-26.13,Discharging,53%,0,
+20:30,6,,,25.65,Battery only,0,,-25.65,Discharging,47%,0,
+20:45,6,,,24.63,Battery only,0,,-24.63,Discharging,41%,0,
+21:00,6,,,21.72,Battery only,0,,-21.72,Discharging,35%,0,
+21:15,1,,,18.24,Grid only,18.24,Importing,,,35%,0,
+21:30,1,,,17.46,Grid only,17.46,Importing,,,35%,0,
+21:45,1,,,14.475,Grid only,14.475,Importing,,,35%,0,
+22:00,1,2,,10.83,Grid only,72.83,Importing,62,Charging,51%,0,
+22:15,1,2,,10.845,Grid only,66.845,Importing,56,Charging,65%,0,
+22:30,1,2,,10.5,Grid only,71.5,Importing,61,Charging,80%,0,
+22:45,1,2,,10.23,Grid only,69.23,Importing,59,Charging,95%,0,
+23:00,1,,,9.735,Grid only,9.735,Importing,,,95%,0,
+23:15,1,,,9.69,Grid only,9.69,Importing,,,95%,0,
+23:30,1,,,8.085,Grid only,8.085,Importing,,,95%,0,
+23:45,1,,,8.55,Grid only,8.55,Importing,,,95%,0,
+,,,,,,,,,,,,

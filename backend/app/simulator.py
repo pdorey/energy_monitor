@@ -26,11 +26,11 @@ class Simulator:
     """In-memory synthetic energy simulator for demo use."""
 
     # config
-    BATTERY_CAPACITY_KWH = 60.0
+    BATTERY_CAPACITY_KWH = 400.0
     BATTERY_MIN_SOC = 10.0
     BATTERY_MAX_SOC = 95.0
-    BATTERY_CHARGE_MAX_W = 20_000.0
-    BATTERY_DISCHARGE_MAX_W = 20_000.0
+    BATTERY_CHARGE_MAX_W = 400_000.0
+    BATTERY_DISCHARGE_MAX_W = 400_000.0
 
     PV_PEAK_JAN_W = 35_000.0
     PV_PEAK_JUN_W = 55_000.0
