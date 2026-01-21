@@ -274,23 +274,25 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
     { from: "gridMeter", to: "inverter", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
     { from: "inverter", to: "gridMeter", sideFrom: "left", sideTo: "right", offsetFrom: "right", offsetTo: "right" },
     
-    // Inverter ↔ Battery: 3 possible connections – depart from 40%, 50% and 60% of height
-    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
-    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
-    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "right", offsetTo: "right" },
-    // Reverse direction uses same physical paths
+    // Inverter ↔ Battery:
+    // 3) battery -> inverter: 30% from top of both boxes (we'll use offset "left" = 30%)
     { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "left", offsetTo: "left" },
-    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
-    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "right", offsetTo: "right" },
+    // 4) inverter -> battery (grid_pwr): 50% from top of both boxes (offset "center" = 50%)
+    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
+    // 5) inverter -> battery (solar_pwr): 70% from top of both boxes (offset "right" = 70%)
+    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "right", offsetTo: "right" },
     
     // Solar ↔ Inverter: 1 vertical line (center to center)
     { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom", offsetFrom: "center", offsetTo: "center" },
     
-    // Inverter ↔ Building: 2 vertical lines (with 40%/60% offsets)
-    // Line 1: building bottom 40%, inverter top 60%
-    { from: "building", to: "inverter", sideFrom: "bottom", sideTo: "top", offsetFrom: "left", offsetTo: "right" },
-    // Line 2: building bottom 60%, inverter top 40%
-    { from: "inverter", to: "building", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "right" },
+    // Inverter ↔ Building:
+    // 1) inverter -> building (solar_pwr): 40% from left of inverter box to 40% from left of building box
+    { from: "inverter", to: "building", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "left" },
+    // 2) inverter -> building (battery_pwr): 60% from left of inverter box to 60% from left of building box
+    { from: "inverter", to: "building", sideFrom: "top", sideTo: "bottom", offsetFrom: "right", offsetTo: "right" },
+    // Reverse direction uses same physical paths (for completeness)
+    { from: "building", to: "inverter", sideFrom: "bottom", sideTo: "top", offsetFrom: "left", offsetTo: "left" },
+    { from: "building", to: "inverter", sideFrom: "bottom", sideTo: "top", offsetFrom: "right", offsetTo: "right" },
     
     // Grid Meter ↔ Building: 1 right-angle line (top of grid meter to left of building)
     { from: "gridMeter", to: "building", sideFrom: "top", sideTo: "left", offsetFrom: "center", offsetTo: "center", isRightAngle: true },
@@ -322,22 +324,46 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
           return { x: pos.x, y: pos.y + halfH };
         }
       case "left":
-        // Left edge: use 40%/60% of height
-        if (offset === "left") {
-          return { x: pos.x - halfW, y: pos.y - halfH * 0.2 }; // 40% from top
-        } else if (offset === "right") {
-          return { x: pos.x - halfW, y: pos.y + halfH * 0.2 }; // 60% from top
+        // Left edge:
+        // - For inverter/battery we use 30%/50%/70% of height (left/center/right)
+        // - For other boxes we keep 40%/60%/50%
+        if (node === "inverter" || node === "battery") {
+          if (offset === "left") {
+            return { x: pos.x - halfW, y: pos.y - halfH * 0.4 }; // 30% from top
+          } else if (offset === "right") {
+            return { x: pos.x - halfW, y: pos.y + halfH * 0.4 }; // 70% from top
+          } else {
+            return { x: pos.x - halfW, y: pos.y };               // 50% from top
+          }
         } else {
-          return { x: pos.x - halfW, y: pos.y };
+          if (offset === "left") {
+            return { x: pos.x - halfW, y: pos.y - halfH * 0.2 }; // 40% from top
+          } else if (offset === "right") {
+            return { x: pos.x - halfW, y: pos.y + halfH * 0.2 }; // 60% from top
+          } else {
+            return { x: pos.x - halfW, y: pos.y };
+          }
         }
       case "right":
-        // Right edge: use 40%/60% of height
-        if (offset === "left") {
-          return { x: pos.x + halfW, y: pos.y - halfH * 0.2 }; // 40% from top
-        } else if (offset === "right") {
-          return { x: pos.x + halfW, y: pos.y + halfH * 0.2 }; // 60% from top
+        // Right edge:
+        // - For inverter/battery we use 30%/50%/70% of height (left/center/right)
+        // - For other boxes we keep 40%/60%/50%
+        if (node === "inverter" || node === "battery") {
+          if (offset === "left") {
+            return { x: pos.x + halfW, y: pos.y - halfH * 0.4 }; // 30% from top
+          } else if (offset === "right") {
+            return { x: pos.x + halfW, y: pos.y + halfH * 0.4 }; // 70% from top
+          } else {
+            return { x: pos.x + halfW, y: pos.y };               // 50% from top
+          }
         } else {
-          return { x: pos.x + halfW, y: pos.y };
+          if (offset === "left") {
+            return { x: pos.x + halfW, y: pos.y - halfH * 0.2 }; // 40% from top
+          } else if (offset === "right") {
+            return { x: pos.x + halfW, y: pos.y + halfH * 0.2 }; // 60% from top
+          } else {
+            return { x: pos.x + halfW, y: pos.y };
+          }
         }
       default:
         return pos;
