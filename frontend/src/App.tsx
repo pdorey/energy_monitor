@@ -41,6 +41,7 @@ interface ConsumptionData {
     from: string;
     to: string;
     color: string;
+    source?: string;
     description: string;
   }>;
   labels: {

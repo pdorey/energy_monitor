@@ -282,6 +282,7 @@ async def get_consumption_data():
                             "from": map_node(from_raw),
                             "to": map_node(to_raw),
                             "color": color,
+                            "source": source_raw,  # Include source (e.g. solar_pwr, battery_pwr, grid_pwr) for matching
                             "description": f"{pid}: {from_raw} → {to_raw}",
                         }
                     )

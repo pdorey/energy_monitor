@@ -19,6 +19,7 @@ interface EnergyFlowDiagramProps {
     from: string;
     to: string;
     color: string;
+    source?: string;
     description: string;
   }>;
   // Labels for boxes from Excel
@@ -510,10 +511,27 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
                 const pathDefs = pathDefinitions.filter(pd => pd.path_id === pathId);
                 return pathDefs.map((pathDef, idx) => {
                   // Find the connection for this path
-                  const conn = staticConnections.find(
-                    c => c.from.toLowerCase() === pathDef.from.toLowerCase() &&
-                         c.to.toLowerCase() === pathDef.to.toLowerCase()
-                  );
+                  // For inverter -> building, match based on source to get the correct line (40% vs 60%)
+                  let conn = staticConnections.find(c => {
+                    const fromMatch = c.from.toLowerCase() === pathDef.from.toLowerCase();
+                    const toMatch = c.to.toLowerCase() === pathDef.to.toLowerCase();
+                    if (!fromMatch || !toMatch) return false;
+                    
+                    // Special handling for inverter -> building: match based on source
+                    if (pathDef.from.toLowerCase() === "inverter" && pathDef.to.toLowerCase() === "building") {
+                      const source = (pathDef.source || "").toLowerCase();
+                      if (source.includes("solar")) {
+                        // solar_pwr -> left/left (40% to 40%)
+                        return c.offsetFrom === "left" && c.offsetTo === "left";
+                      } else if (source.includes("battery")) {
+                        // battery_pwr -> right/right (60% to 60%)
+                        return c.offsetFrom === "right" && c.offsetTo === "right";
+                      }
+                    }
+                    
+                    // For other connections, any matching from/to is fine
+                    return true;
+                  });
                   
                   if (!conn) return null;
                   
@@ -673,7 +691,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
         {/* Component boxes */}
         {/* Building */}
         <div
-          className="absolute bg-slate-700/80 rounded-lg p-4 border-2 border-slate-600 flex flex-col items-center justify-center"
+          className="absolute bg-slate-700/80 rounded-lg p-3 border-2 border-slate-600 flex flex-col justify-start"
           style={{
             left: positions.building.x - boxWidth / 2,
             top: positions.building.y - boxHeight / 2,
@@ -681,14 +699,17 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="text-3xl mb-1">🏢</div>
-          <div className="text-xs font-semibold text-slate-300 mb-1">{labels?.building || "Building Load"}</div>
+          <div className="flex items-center gap-1 mb-1">
+            <div className="text-xl">🏢</div>
+            <div className="text-xs font-semibold text-slate-300">{labels?.building || "Building Load"}</div>
+          </div>
           <div className="text-sm font-mono text-slate-300">{loadKw.toFixed(1)} kW</div>
+          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.building ? "" : "\u00A0"}</div>
         </div>
 
         {/* Grid */}
         <div
-          className="absolute bg-red-900/40 rounded-lg p-3 border-2 border-red-500/50 flex flex-col items-center justify-center"
+          className="absolute bg-blue-900/40 rounded-lg p-3 border-2 border-blue-500/50 flex flex-col justify-start"
           style={{
             left: positions.grid.x - boxWidth / 2,
             top: positions.grid.y - boxHeight / 2,
@@ -696,19 +717,19 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="text-2xl mb-1">⚡</div>
-          <div className="text-lg font-semibold text-red-300 mb-1">{labels?.grid || "GRID"}</div>
-          <div className={`text-sm font-mono ${gridKw >= 0 ? "text-red-300" : "text-emerald-300"}`}>
+          <div className="flex items-center gap-1 mb-1">
+            <div className="text-xl">⚡</div>
+            <div className="text-xs font-semibold text-blue-300">{labels?.grid || "GRID"}</div>
+          </div>
+          <div className={`text-sm font-mono ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>
             {gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)} kW
           </div>
-          <div className="text-xs text-slate-400 mt-1">
-            {gridKw >= 0 ? "Importing" : "Exporting"}
-          </div>
+          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.grid || "\u00A0"}</div>
         </div>
 
         {/* Grid Meter */}
         <div
-          className="absolute bg-red-900/40 rounded-lg p-3 border-2 border-red-500/50 flex flex-col items-center justify-center"
+          className="absolute bg-red-900/40 rounded-lg p-3 border-2 border-red-500/50 flex flex-col justify-start"
           style={{
             left: positions.gridMeter.x - boxWidth / 2,
             top: positions.gridMeter.y - boxHeight / 2,
@@ -716,16 +737,19 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="text-2xl mb-1">📊</div>
-          <div className="text-lg font-semibold text-red-300 mb-1">{labels?.gridMeter || "GRID METER"}</div>
-          <div className={`text-sm font-mono ${gridKw >= 0 ? "text-red-300" : "text-red-300"}`}>
+          <div className="flex items-center gap-1 mb-1">
+            <div className="text-xl">📊</div>
+            <div className="text-xs font-semibold text-red-300">{labels?.gridMeter || "GRID METER"}</div>
+          </div>
+          <div className="text-sm font-mono text-red-300">
             {Math.abs(gridKw).toFixed(1)} kW
           </div>
+          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.gridMeter || "\u00A0"}</div>
         </div>
 
         {/* Inverter */}
         <div
-          className="absolute bg-slate-700/80 rounded-lg p-3 border-2 border-slate-500 flex flex-col items-center justify-center"
+          className="absolute bg-slate-700/80 rounded-lg p-3 border-2 border-slate-500 flex flex-col justify-start"
           style={{
             left: positions.inverter.x - boxWidth / 2,
             top: positions.inverter.y - boxHeight / 2,
@@ -733,14 +757,17 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="text-2xl mb-1">🔄</div>
-          <div className="text-lg font-semibold text-slate-300 mb-1">{labels?.inverter || "INVERTER"}</div>
-          <div className="text-xs text-slate-400">DC ↔ AC</div>
+          <div className="flex items-center gap-1 mb-1">
+            <div className="text-xl">🔄</div>
+            <div className="text-xs font-semibold text-slate-300">{labels?.inverter || "INVERTER"}</div>
+          </div>
+          <div className="text-sm font-mono text-slate-300">— kW</div>
+          <div className="text-xs text-slate-400 min-h-[1rem]">DC ↔ AC</div>
         </div>
 
         {/* Solar */}
         <div
-          className="absolute bg-amber-900/40 rounded-lg p-3 border-2 border-amber-500/50 flex flex-col items-center justify-center"
+          className="absolute bg-amber-900/40 rounded-lg p-3 border-2 border-amber-500/50 flex flex-col justify-start"
           style={{
             left: positions.solar.x - boxWidth / 2,
             top: positions.solar.y - boxHeight / 2,
@@ -748,14 +775,17 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="text-2xl mb-1">☀️</div>
-          <div className="text-lg font-semibold text-amber-300 mb-1">{labels?.solar || "SOLAR"}</div>
+          <div className="flex items-center gap-1 mb-1">
+            <div className="text-xl">☀️</div>
+            <div className="text-xs font-semibold text-amber-300">{labels?.solar || "SOLAR"}</div>
+          </div>
           <div className="text-sm font-mono text-amber-300">{solarKw.toFixed(1)} kW</div>
+          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.solar || "\u00A0"}</div>
         </div>
 
         {/* Battery */}
         <div
-          className="absolute bg-emerald-900/40 rounded-lg p-3 border-2 border-emerald-500/50 flex flex-col items-center justify-center"
+          className="absolute bg-emerald-900/40 rounded-lg p-3 border-2 border-emerald-500/50 flex flex-col justify-start"
           style={{
             left: positions.battery.x - boxWidth / 2,
             top: positions.battery.y - boxHeight / 2,
@@ -763,15 +793,15 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="text-2xl mb-1">🔋</div>
-          <div className="text-lg font-semibold text-emerald-300 mb-1">{labels?.battery || "BATTERY"}</div>
+          <div className="flex items-center gap-1 mb-1">
+            <div className="text-xl">🔋</div>
+            <div className="text-xs font-semibold text-emerald-300">{labels?.battery || "BATTERY"}</div>
+          </div>
           <div className="text-sm font-mono text-emerald-300">
             {batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)} kW
           </div>
-          <div className="text-xs text-slate-400 mt-1">{soc.toFixed(0)}% SOC</div>
-          <div className="text-xs text-slate-400">
-            {batteryKw >= 0 ? "Discharging" : "Charging"}
-          </div>
+          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.battery || "\u00A0"}</div>
+          <div className="text-xs text-slate-400">{soc.toFixed(0)}% SOC</div>
         </div>
       </div>
     </div>
