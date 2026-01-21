@@ -322,9 +322,16 @@ async def ws_live(websocket: WebSocket):
 async def broadcast_loop():
     while True:
         await asyncio.sleep(2)
-        if not sim or not clients:
+        if not sim:
             continue
+
+        # Always advance the simulator so CSV‑driven time and values move forward
+        # even if there are no connected WebSocket clients.
         snap = sim.generate_snapshot()
+
+        if not clients:
+            continue
+
         payload = json.dumps(
             {"type": "snapshot", "data": json.loads(Snapshot.model_validate(snap).model_dump_json())}
         )
