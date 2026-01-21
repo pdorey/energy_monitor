@@ -332,7 +332,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
     // Special right-angle path: from top to left (e.g., Grid Meter top to Building left)
     if (isRightAngle && fromSide === "top" && toSide === "left") {
       // Go straight up from grid meter top, then horizontal to building left
-      const midY = from.y - 50; // Go up 50px first
+      const midY = from.y ; // Go up 50px first
       const midX = to.x; // Then horizontal to building's X
       return `M ${from.x} ${from.y} L ${from.x} ${midY} L ${midX} ${midY} L ${to.x} ${to.y}`;
     }
