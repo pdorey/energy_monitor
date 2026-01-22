@@ -233,7 +233,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   const boxWidth = 140;
   const boxHeight = 100;
   const boxInfoWidth = 200;
-  const boxInfoHeight = 80;
+  const boxInfoHeight = 100;
 
   // Layout: Diagram moved to the left, new boxes on the right
   // Building directly above inverter, Solar directly below inverter
@@ -242,7 +242,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   const gridMeterX = 100;  // Moved left
   const inverterX = 300;   // Moved left
   const batteryX = inverterX + (inverterX - gridMeterX); // Equal spacing: 400 + (400-200) = 600
-  const rightBoxesX = 700; // Position for new boxes on the right
+  const rightBoxesX = 800; // Position for new boxes on the right
   
   const positions = {
     building: { x: inverterX, y: 50 },      // Directly above inverter
@@ -545,8 +545,8 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
           </div>
         )}
       </div>
-      <div className="relative" style={{ width: "1000px", height: "450px", margin: "0 auto" }}>
-        <svg width="1000" height="450" className="absolute inset-0">
+      <div className="relative" style={{ width: "900px", height: "450px", margin: "0 auto" }}>
+        <svg width="900" height="450" className="absolute inset-0">
           {/* All static interconnection lines (always visible, gray when inactive) */}
           {staticConnections.map((conn, idx) => {
             const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom, conn.to);
