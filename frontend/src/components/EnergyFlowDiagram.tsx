@@ -244,7 +244,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   
   const positions = {
     building: { x: 400, y: 50 },      // Directly above inverter
-    grid: { x: 200, y: 320 },         // Below gridMeter
+    grid: { x: 200, y: 350 },         // Below gridMeter
     gridMeter: { x: gridMeterX, y: 200 },
     inverter: { x: inverterX, y: 200 },  // Center
     solar: { x: 400, y: 350 },        // Directly below inverter
