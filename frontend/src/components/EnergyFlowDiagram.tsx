@@ -925,8 +925,8 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
           style={{
             left: positions.dailyConsumption.x - boxWidth / 2,
             top: positions.dailyConsumption.y - boxHeight / 2,
-            width: boxWidth,
-            height: boxHeight,
+            width: boxInfoWidth,
+            height: boxInfoHeight,
           }}
         >
           <div className="flex items-center gap-1 mb-1">
@@ -945,8 +945,8 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
           style={{
             left: positions.dailySolar.x - boxWidth / 2,
             top: positions.dailySolar.y - boxHeight / 2,
-            width: boxWidth,
-            height: boxHeight,
+            width: boxInfoWidth,
+            height: boxInfoHeight,
           }}
         >
           <div className="flex items-center gap-1 mb-1">
@@ -965,8 +965,8 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
           style={{
             left: positions.marketPrices.x - boxWidth / 2,
             top: positions.marketPrices.y - boxHeight / 2,
-            width: boxWidth,
-            height: boxHeight,
+            width: boxInfoWidth,
+            height: boxInfoHeight,
           }}
         >
           <div className="flex items-center gap-1 mb-1">
