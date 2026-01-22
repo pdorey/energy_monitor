@@ -205,8 +205,8 @@ async def get_consumption_data():
         # Additional fields for new boxes
         building_consumption = parse_float("BUILDING CONSUMPTION")
         solar_production = parse_float("SOLAR PRODUCTION")
-        spot_price = parse_float("SPOT PRICE")
-        export_price = parse_float("EXPORT PRICE")
+        spot_price = parse_float("SPOT PRICE") * 1000
+        export_price = parse_float("EXPORT PRICE") * 1000
         tariff = (row.get("TARIFF") or "").strip()
 
         # Active path ID (single PATH column, e.g. a..g)

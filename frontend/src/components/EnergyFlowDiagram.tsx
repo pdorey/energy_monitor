@@ -972,10 +972,10 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             <div className="text-xs font-semibold text-slate-300">Market Prices</div>
           </div>
           <div className={`text-sm font-mono ${getTariffColor(tariff || "", false)}`}>
-            Spot: {spotPrice !== undefined ? spotPrice.toFixed(3) : "—"}
+            Spot: {spotPrice !== undefined ? spotPrice.toFixed(1) : "—"} €/MWh
           </div>
           <div className={`text-sm font-mono ${getTariffColor(tariff || "", true)}`}>
-            Export: {exportPrice !== undefined ? exportPrice.toFixed(3) : "—"}
+            Export: {exportPrice !== undefined ? exportPrice.toFixed(1) : "—"} €/MWh
           </div>
         </div>
       </div>
