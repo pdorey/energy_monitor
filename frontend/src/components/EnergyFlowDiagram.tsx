@@ -232,7 +232,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   // Component box dimensions and positions
   const boxWidth = 140;
   const boxHeight = 100;
-  const boxInfoWidth = 170;
+  const boxInfoWidth = 200;
   const boxInfoHeight = 80;
 
   // Layout: Diagram moved to the left, new boxes on the right
@@ -242,7 +242,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   const gridMeterX = 100;  // Moved left
   const inverterX = 300;   // Moved left
   const batteryX = inverterX + (inverterX - gridMeterX); // Equal spacing: 400 + (400-200) = 600
-  const rightBoxesX = 800; // Position for new boxes on the right
+  const rightBoxesX = 700; // Position for new boxes on the right
   
   const positions = {
     building: { x: inverterX, y: 50 },      // Directly above inverter
