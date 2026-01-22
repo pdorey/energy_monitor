@@ -202,6 +202,13 @@ async def get_consumption_data():
         power_kw = building_kw  # alias, if needed
         solar_kw = parse_float("SOLAR PWR")
 
+        # Additional fields for new boxes
+        building_consumption = parse_float("BUILDING CONSUMPTION")
+        solar_production = parse_float("SOLAR PRODUCTION")
+        spot_price = parse_float("SPOT PRICE")
+        export_price = parse_float("EXPORT PRICE")
+        tariff = (row.get("TARIFF") or "").strip()
+
         # Active path ID (single PATH column, e.g. a..g)
         active_paths: list[str] = []
         path_val = (row.get("PATH") or "").strip()
@@ -296,6 +303,11 @@ async def get_consumption_data():
             "active_paths": active_paths,
             "path_definitions": path_definitions,
             "labels": labels,
+            "building_consumption": building_consumption,
+            "solar_production": solar_production,
+            "spot_price": spot_price,
+            "export_price": export_price,
+            "tariff": tariff,
         }
     except Exception as e:
         import traceback

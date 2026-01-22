@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Snapshot } from "../hooks/useLiveData";
 
 interface EnergyFlowDiagramProps {
@@ -33,6 +33,12 @@ interface EnergyFlowDiagramProps {
   };
   // Time to display (from Excel table)
   displayTime?: string;
+  // Additional data for new boxes
+  buildingConsumption?: number;
+  solarProduction?: number;
+  spotPrice?: number;
+  exportPrice?: number;
+  tariff?: string;
 }
 
 interface EnergyFlow {
@@ -70,7 +76,7 @@ const flowColors = {
   // etc.
 //];
 
-export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDefinitions = [], labels, displayTime }: EnergyFlowDiagramProps) {
+export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDefinitions = [], labels, displayTime, buildingConsumption, solarProduction, spotPrice, exportPrice, tariff }: EnergyFlowDiagramProps) {
   // Calculate power values in kW
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
@@ -227,20 +233,26 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   const boxWidth = 140;
   const boxHeight = 100;
 
-  // Layout matching PowerPoint diagram exactly
+  // Layout: Diagram moved to the left, new boxes on the right
   // Building directly above inverter, Solar directly below inverter
+  // Grid below Grid Meter
   // Spacing: Grid Meter to Inverter = Inverter to Battery
-  const gridMeterX = 300;
-  const inverterX = 500;
-  const batteryX = inverterX + (inverterX - gridMeterX); // Equal spacing: 500 + (500-300) = 700
+  const gridMeterX = 200;  // Moved left
+  const inverterX = 400;   // Moved left
+  const batteryX = inverterX + (inverterX - gridMeterX); // Equal spacing: 400 + (400-200) = 600
+  const rightBoxesX = 800; // Position for new boxes on the right
   
   const positions = {
-    building: { x: 500, y: 50 },  // Directly above inverter
-    grid: { x: 100, y: 200 },
+    building: { x: 400, y: 50 },      // Directly above inverter
+    grid: { x: 200, y: 320 },         // Below gridMeter
     gridMeter: { x: gridMeterX, y: 200 },
     inverter: { x: inverterX, y: 200 },  // Center
-    solar: { x: 500, y: 350 },    // Directly below inverter
+    solar: { x: 400, y: 350 },        // Directly below inverter
     battery: { x: batteryX, y: 200 },  // Equal spacing from inverter
+    // New boxes on the right
+    dailyConsumption: { x: rightBoxesX, y: 100 },
+    dailySolar: { x: rightBoxesX, y: 220 },
+    marketPrices: { x: rightBoxesX, y: 340 },
   };
 
   // Define ALL possible interconnections (always visible)
@@ -266,10 +278,11 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
     isRightAngle?: boolean; // For special right-angle paths
   }> = [
     // Grid ↔ Grid Meter:
-    // 1) grid -> gridMeter: 40% from top of both boxes (offset "left" = 40%)
-    { from: "grid", to: "gridMeter", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
-    // 2) gridMeter -> grid: 60% from top of both boxes (offset "right" = 60%)
-    { from: "gridMeter", to: "grid", sideFrom: "left", sideTo: "right", offsetFrom: "right", offsetTo: "right" },
+    // Lines go from top of grid box to bottom of gridmeter box (vertical)
+    // 1) grid -> gridMeter (grid_pwr): 40% from left of both boxes
+    { from: "grid", to: "gridMeter", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "left" },
+    // 2) gridMeter -> grid (solar_pwr): 60% from left of both boxes
+    { from: "gridMeter", to: "grid", sideFrom: "bottom", sideTo: "top", offsetFrom: "right", offsetTo: "right" },
     
     // Grid Meter ↔ Inverter: 2 possible connections – depart from 40% and 60% of height
     { from: "gridMeter", to: "inverter", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
@@ -435,6 +448,53 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   // Animated time display - updates every second, value comes from Consumption.csv
   const [currentTime, setCurrentTime] = useState<string>("");
   
+  // Cumulative sums for daily consumption and solar production
+  // CSV values appear to be incremental per 15-min period, so we sum them
+  const [dailyConsumptionSum, setDailyConsumptionSum] = useState<number>(0);
+  const [dailySolarSum, setDailySolarSum] = useState<number>(0);
+  const lastTimeRef = useRef<string>("");
+  const processedRowsRef = useRef<Set<string>>(new Set());
+  
+  // Update cumulative sums when buildingConsumption or solarProduction changes
+  useEffect(() => {
+    if (buildingConsumption !== undefined && solarProduction !== undefined && displayTime) {
+      // Reset if time goes backwards (new day cycle)
+      if (displayTime < lastTimeRef.current) {
+        setDailyConsumptionSum(0);
+        setDailySolarSum(0);
+        processedRowsRef.current.clear();
+      }
+      
+      // Only add if we haven't processed this time yet
+      if (!processedRowsRef.current.has(displayTime)) {
+        setDailyConsumptionSum(prev => prev + buildingConsumption);
+        setDailySolarSum(prev => prev + solarProduction);
+        processedRowsRef.current.add(displayTime);
+      }
+      
+      lastTimeRef.current = displayTime;
+    }
+  }, [buildingConsumption, solarProduction, displayTime]);
+  
+  // Helper to get tariff color
+  const getTariffColor = (tariffValue: string, isExport: boolean = false) => {
+    const tariff = (tariffValue || "").toLowerCase();
+    if (isExport) {
+      // Export: Super Low (Red), Low (Orange), Mid (Yellow), Peak (Green)
+      if (tariff.includes("super low")) return "text-red-300";
+      if (tariff.includes("low")) return "text-orange-300";
+      if (tariff.includes("mid")) return "text-yellow-300";
+      if (tariff.includes("peak")) return "text-green-300";
+    } else {
+      // Spot: Super Low (Green), Low (Yellow), Mid (Orange), Peak (Red)
+      if (tariff.includes("super low")) return "text-green-300";
+      if (tariff.includes("low")) return "text-yellow-300";
+      if (tariff.includes("mid")) return "text-orange-300";
+      if (tariff.includes("peak")) return "text-red-300";
+    }
+    return "text-slate-300";
+  };
+  
   useEffect(() => {
     const updateTime = () => {
       if (displayTime) {
@@ -483,8 +543,8 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
           </div>
         )}
       </div>
-      <div className="relative" style={{ width: "700px", height: "450px", margin: "0 auto" }}>
-        <svg width="700" height="450" className="absolute inset-0">
+      <div className="relative" style={{ width: "1000px", height: "450px", margin: "0 auto" }}>
+        <svg width="1000" height="450" className="absolute inset-0">
           {/* All static interconnection lines (always visible, gray when inactive) */}
           {staticConnections.map((conn, idx) => {
             const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom, conn.to);
@@ -529,6 +589,20 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
                         return c.offsetFrom === "left" && c.offsetTo === "left";
                       } else if (source.includes("battery")) {
                         // battery_pwr -> right/right (60% to 60%)
+                        return c.offsetFrom === "right" && c.offsetTo === "right";
+                      }
+                    }
+                    
+                    // Special handling for grid <-> gridMeter: match based on source
+                    // Lines are vertical (top of grid to bottom of gridMeter)
+                    // grid_pwr at 40% from left, solar_pwr at 60% from left
+                    if ((pathDef.from.toLowerCase() === "grid" && pathDef.to.toLowerCase() === "gridmeter") ||
+                        (pathDef.from.toLowerCase() === "gridmeter" && pathDef.to.toLowerCase() === "grid")) {
+                      if (source.includes("grid")) {
+                        // grid_pwr -> left/left (40% from left)
+                        return c.offsetFrom === "left" && c.offsetTo === "left";
+                      } else if (source.includes("solar")) {
+                        // solar_pwr -> right/right (60% from left)
                         return c.offsetFrom === "right" && c.offsetTo === "right";
                       }
                     }
@@ -841,6 +915,68 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
           </div>
           <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.battery || "\u00A0"}</div>
           <div className="text-xs text-slate-400">{soc.toFixed(0)}% SOC</div>
+        </div>
+
+        {/* Daily Consumption */}
+        <div
+          className="absolute bg-slate-700/80 rounded-lg p-3 border-2 border-slate-600 flex flex-col justify-start"
+          style={{
+            left: positions.dailyConsumption.x - boxWidth / 2,
+            top: positions.dailyConsumption.y - boxHeight / 2,
+            width: boxWidth,
+            height: boxHeight,
+          }}
+        >
+          <div className="flex items-center gap-1 mb-1">
+            <div className="text-xl">📈</div>
+            <div className="text-xs font-semibold text-slate-300">Daily Consumption</div>
+          </div>
+          <div className="text-sm font-mono text-slate-300">
+            {dailyConsumptionSum.toFixed(2)} kWh
+          </div>
+          <div className="text-xs text-slate-400 min-h-[1rem]">{"\u00A0"}</div>
+        </div>
+
+        {/* Daily Solar Production */}
+        <div
+          className="absolute bg-amber-900/40 rounded-lg p-3 border-2 border-amber-500/50 flex flex-col justify-start"
+          style={{
+            left: positions.dailySolar.x - boxWidth / 2,
+            top: positions.dailySolar.y - boxHeight / 2,
+            width: boxWidth,
+            height: boxHeight,
+          }}
+        >
+          <div className="flex items-center gap-1 mb-1">
+            <div className="text-xl">☀️</div>
+            <div className="text-xs font-semibold text-amber-300">Daily Solar</div>
+          </div>
+          <div className="text-sm font-mono text-amber-300">
+            {dailySolarSum.toFixed(2)} kWh
+          </div>
+          <div className="text-xs text-slate-400 min-h-[1rem]">{"\u00A0"}</div>
+        </div>
+
+        {/* Market Prices */}
+        <div
+          className="absolute bg-slate-700/80 rounded-lg p-3 border-2 border-slate-600 flex flex-col justify-start"
+          style={{
+            left: positions.marketPrices.x - boxWidth / 2,
+            top: positions.marketPrices.y - boxHeight / 2,
+            width: boxWidth,
+            height: boxHeight,
+          }}
+        >
+          <div className="flex items-center gap-1 mb-1">
+            <div className="text-xl">💰</div>
+            <div className="text-xs font-semibold text-slate-300">Market Prices</div>
+          </div>
+          <div className={`text-sm font-mono ${getTariffColor(tariff || "", false)}`}>
+            Spot: {spotPrice !== undefined ? spotPrice.toFixed(3) : "—"}
+          </div>
+          <div className={`text-sm font-mono ${getTariffColor(tariff || "", true)}`}>
+            Export: {exportPrice !== undefined ? exportPrice.toFixed(3) : "—"}
+          </div>
         </div>
       </div>
     </div>

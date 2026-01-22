@@ -52,6 +52,11 @@ interface ConsumptionData {
     solar?: string;
     battery?: string;
   };
+  building_consumption?: number;
+  solar_production?: number;
+  spot_price?: number;
+  export_price?: number;
+  tariff?: string;
 }
 
 export function App() {
@@ -189,6 +194,11 @@ export function App() {
               pathDefinitions={consumptionData?.path_definitions}
               labels={consumptionData?.labels}
               displayTime={consumptionData?.time}
+              buildingConsumption={consumptionData?.building_consumption}
+              solarProduction={consumptionData?.solar_production}
+              spotPrice={consumptionData?.spot_price}
+              exportPrice={consumptionData?.export_price}
+              tariff={consumptionData?.tariff}
             />
           </div>
         )}
