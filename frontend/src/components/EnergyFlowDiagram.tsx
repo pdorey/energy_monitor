@@ -245,11 +245,11 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   const rightBoxesX = 800; // Position for new boxes on the right
   
   const positions = {
-    building: { x: 400, y: 50 },      // Directly above inverter
-    grid: { x: 200, y: 350 },         // Below gridMeter
+    building: { x: inverterX, y: 50 },      // Directly above inverter
+    grid: { x: gridMeterX, y: 350 },         // Below gridMeter
     gridMeter: { x: gridMeterX, y: 200 },
     inverter: { x: inverterX, y: 200 },  // Center
-    solar: { x: 400, y: 350 },        // Directly below inverter
+    solar: { x: inverterX, y: 350 },        // Directly below inverter
     battery: { x: batteryX, y: 200 },  // Equal spacing from inverter
     // New boxes on the right
     dailyConsumption: { x: rightBoxesX, y: 100 },
