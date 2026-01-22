@@ -25,8 +25,23 @@ interface EquipmentItem {
 }
 
 function formatHours(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  return `${h}h`;
+  const totalMinutes = Math.floor(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    if (remainingHours === 0) {
+      return `${days}d`;
+    }
+    return `${days}d ${remainingHours}h ${minutes}m`;
+  }
+  
+  if (minutes === 0) {
+    return `${hours}h`;
+  }
+  return `${hours}h ${minutes}m`;
 }
 
 interface ConsumptionData {
