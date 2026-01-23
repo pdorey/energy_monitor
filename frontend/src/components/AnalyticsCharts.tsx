@@ -35,10 +35,16 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
     return hours * 60 + minutes;
   };
 
-  // Find current index based on currentTime
+  // Find current index based on currentTime and prepare data for animation
   useEffect(() => {
-    if (!currentTime || data.length === 0) {
+    if (data.length === 0) {
       setDisplayedData([]);
+      return;
+    }
+
+    if (!currentTime) {
+      // If no current time, show all data
+      setDisplayedData(data);
       return;
     }
 
@@ -51,8 +57,28 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
     // If exact match not found, use the last index before current time
     const idx = currentIdx >= 0 ? currentIdx : data.length;
     
-    // Show data up to current index (animate from 00:00 to current time)
-    setDisplayedData(data.slice(0, idx + 1));
+    // Create data array with all time points, but only populate values up to current time
+    // This ensures x-axis shows full 24 hours but lines animate progressively
+    const fullData: IntradayDataPoint[] = data.map((point, index) => {
+      if (index <= idx) {
+        // Show actual data up to current time
+        return point;
+      } else {
+        // For future times, return null values (will be hidden by chart)
+        return {
+          time: point.time,
+          cumulative_grid_energy: point.cumulative_grid_energy,
+          cumulative_solar_energy: point.cumulative_solar_energy,
+          cumulative_battery_energy: point.cumulative_battery_energy,
+          cumulative_building_load: point.cumulative_building_load,
+          spot_price: point.spot_price,
+          buy_price: point.buy_price,
+          export_price: point.export_price,
+        };
+      }
+    });
+    
+    setDisplayedData(fullData);
   }, [currentTime, data]);
 
   // Format time for X-axis
@@ -111,7 +137,8 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
               stroke="#ef4444"
               strokeWidth={2}
               dot={false}
-              animationDuration={300}
+              animationDuration={500}
+              isAnimationActive={true}
             />
             <Line
               type="monotone"
@@ -120,7 +147,8 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
               stroke="#fbbf24"
               strokeWidth={2}
               dot={false}
-              animationDuration={300}
+              animationDuration={500}
+              isAnimationActive={true}
             />
             <Line
               type="monotone"
@@ -129,7 +157,8 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
               stroke="#10b981"
               strokeWidth={2}
               dot={false}
-              animationDuration={300}
+              animationDuration={500}
+              isAnimationActive={true}
             />
             <Line
               type="monotone"
@@ -138,7 +167,8 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
               stroke="#3b82f6"
               strokeWidth={2}
               dot={false}
-              animationDuration={300}
+              animationDuration={500}
+              isAnimationActive={true}
             />
           </LineChart>
         </ResponsiveContainer>
