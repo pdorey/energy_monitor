@@ -117,6 +117,12 @@ class Simulator:
             return None
         return self._rows[self._last_index]
 
+    def get_all_rows(self) -> list[dict]:
+        """
+        Public helper to get all CSV rows for analytics.
+        """
+        return self._rows.copy() if self._rows else []
+
     # --- public API -------------------------------------------------------
 
     def generate_snapshot(self) -> Snapshot:

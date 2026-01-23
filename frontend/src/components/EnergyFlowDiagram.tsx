@@ -37,6 +37,7 @@ interface EnergyFlowDiagramProps {
   buildingConsumption?: number;
   solarProduction?: number;
   spotPrice?: number;
+  buyPrice?: number;  // New field
   exportPrice?: number;
   tariff?: string;
 }
@@ -76,7 +77,7 @@ const flowColors = {
   // etc.
 //];
 
-export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDefinitions = [], labels, displayTime, buildingConsumption, solarProduction, spotPrice, exportPrice, tariff }: EnergyFlowDiagramProps) {
+export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDefinitions = [], labels, displayTime, buildingConsumption, solarProduction, spotPrice, buyPrice, exportPrice, tariff }: EnergyFlowDiagramProps) {
   // Calculate power values in kW
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
@@ -974,7 +975,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             <div className="text-xs font-semibold text-slate-300">Market Prices</div>
           </div>
           <div className={`text-sm font-mono ${getTariffColor(tariff || "", false)}`}>
-            Spot: {spotPrice !== undefined ? spotPrice.toFixed(0) : "—"} €/MWh
+            Buy: {buyPrice !== undefined ? buyPrice.toFixed(0) : "—"} €/MWh
           </div>
           <div className={`text-sm font-mono ${getTariffColor(tariff || "", true)}`}>
             Export: {exportPrice !== undefined ? exportPrice.toFixed(0) : "—"} €/MWh

@@ -158,6 +158,68 @@ async def api_equipment():
     return sim.build_equipment(snap)
 
 
+@app.get("/api/intraday-analytics")
+async def get_intraday_analytics():
+    """
+    Return 24-hour intraday data from Consumption.csv for analytics charts.
+    Returns all rows with cumulative energy values and prices.
+    """
+    try:
+        if not sim:
+            return {"error": "Simulator not initialized"}
+        
+        # Get all rows from CSV
+        rows = sim.get_all_rows()
+        
+        def parse_float(field: str, row: dict) -> float:
+            val = (row.get(field) or "").strip()
+            try:
+                return float(val) if val else 0.0
+            except ValueError:
+                return 0.0
+        
+        data = []
+        cumulative_grid = 0.0
+        cumulative_solar = 0.0
+        cumulative_battery = 0.0
+        cumulative_building = 0.0
+        
+        for row in rows:
+            time_value = (row.get("TIME") or "").strip()
+            
+            # Cumulative energy values
+            grid_energy = parse_float("GRID ENERGY", row)
+            solar_prod = parse_float("SOLAR PRODUCTION", row)
+            battery_energy = parse_float("BATTERY", row)
+            building_consumption = parse_float("BUILDING CONSUMPTION", row)
+            
+            cumulative_grid += grid_energy
+            cumulative_solar += solar_prod
+            cumulative_battery += battery_energy
+            cumulative_building += building_consumption
+            
+            # Prices
+            spot_price = parse_float("SPOT PRICE", row) * 1000
+            buy_price = parse_float("BUY PRICE", row) * 1000  # May not exist in older CSV files
+            export_price = parse_float("EXPORT PRICE", row) * 1000
+            
+            data.append({
+                "time": time_value,
+                "cumulative_grid_energy": cumulative_grid,
+                "cumulative_solar_energy": cumulative_solar,
+                "cumulative_battery_energy": cumulative_battery,
+                "cumulative_building_load": cumulative_building,
+                "spot_price": spot_price,
+                "buy_price": buy_price,
+                "export_price": export_price,
+            })
+        
+        return {"data": data}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
+
+
 @app.get("/api/analytics", response_model=AnalyticsResponse)
 async def api_analytics(hours: int = 24, resolution: int = 60):
     if not sim:
@@ -206,6 +268,7 @@ async def get_consumption_data():
         building_consumption = parse_float("BUILDING CONSUMPTION")
         solar_production = parse_float("SOLAR PRODUCTION")
         spot_price = parse_float("SPOT PRICE") * 1000
+        buy_price = parse_float("BUY PRICE") * 1000  # May not exist in older CSV files, defaults to 0
         export_price = parse_float("EXPORT PRICE") * 1000
         tariff = (row.get("TARIFF") or "").strip()
 
@@ -306,6 +369,7 @@ async def get_consumption_data():
             "building_consumption": building_consumption,
             "solar_production": solar_production,
             "spot_price": spot_price,
+            "buy_price": buy_price,  # New field
             "export_price": export_price,
             "tariff": tariff,
         }

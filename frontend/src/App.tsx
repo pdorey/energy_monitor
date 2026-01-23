@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchJSON } from "./api/client";
 import { useLiveData } from "./hooks/useLiveData";
 import { EnergyFlowDiagram } from "./components/EnergyFlowDiagram";
+import { AnalyticsCharts } from "./components/AnalyticsCharts";
 
 interface Overview {
   timestamp: string;
@@ -70,6 +71,7 @@ interface ConsumptionData {
   building_consumption?: number;
   solar_production?: number;
   spot_price?: number;
+  buy_price?: number;  // New field
   export_price?: number;
   tariff?: string;
 }
@@ -79,20 +81,23 @@ export function App() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [consumptionData, setConsumptionData] = useState<ConsumptionData | null>(null);
+  const [intradayData, setIntradayData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { snapshot, status: wsStatus } = useLiveData();
 
   useEffect(() => {
     async function load() {
       try {
-        const [ov, eq, consumption] = await Promise.all([
+        const [ov, eq, consumption, intraday] = await Promise.all([
           fetchJSON<Overview>("/api/overview"),
           fetchJSON<EquipmentItem[]>("/api/equipment"),
           fetchJSON<ConsumptionData>("/api/consumption-data").catch(() => null),
+          fetchJSON<{ data: any[] }>("/api/intraday-analytics").catch(() => ({ data: [] })),
         ]);
         setOverview(ov);
         setEquipment(eq);
         setConsumptionData(consumption);
+        setIntradayData(intraday.data || []);
       } catch (e) {
         console.error(e);
       } finally {
@@ -212,6 +217,7 @@ export function App() {
               buildingConsumption={consumptionData?.building_consumption}
               solarProduction={consumptionData?.solar_production}
               spotPrice={consumptionData?.spot_price}
+              buyPrice={consumptionData?.buy_price}
               exportPrice={consumptionData?.export_price}
               tariff={consumptionData?.tariff}
             />
@@ -245,9 +251,17 @@ export function App() {
         )}
 
         {!loading && tab === "analytics" && (
-          <div className="text-slate-400 text-sm">
-            Analytics API is wired (`/api/analytics`), charts can be added here
-            (e.g. Recharts or Chart.js) using the timeseries data.
+          <div>
+            {intradayData.length > 0 ? (
+              <AnalyticsCharts
+                data={intradayData}
+                currentTime={consumptionData?.time}
+              />
+            ) : (
+              <div className="text-slate-400 text-sm">
+                Loading analytics data...
+              </div>
+            )}
           </div>
         )}
       </main>
