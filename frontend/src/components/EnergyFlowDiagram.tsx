@@ -203,7 +203,7 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
       // Grid supplies what building needs beyond what inverter can provide
       const gridMeterToInverter = Math.max(0, loadKw - inverterToBuilding);
       if (gridMeterToInverter > threshold) {
-        flows.push({
+        flows.push({ 
           from: "gridMeter",
           to: "inverter",
           powerKw: gridMeterToInverter,
