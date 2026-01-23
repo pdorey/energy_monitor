@@ -36,8 +36,7 @@ interface EnergyFlowDiagramProps {
   // Additional data for new boxes
   buildingConsumption?: number;
   solarProduction?: number;
-  spotPrice?: number;
-  buyPrice?: number;  // New field
+  buyPrice?: number;
   exportPrice?: number;
   tariff?: string;
 }
@@ -77,7 +76,7 @@ const flowColors = {
   // etc.
 //];
 
-export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDefinitions = [], labels, displayTime, buildingConsumption, solarProduction, spotPrice, buyPrice, exportPrice, tariff }: EnergyFlowDiagramProps) {
+export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDefinitions = [], labels, displayTime, buildingConsumption, solarProduction, buyPrice, exportPrice, tariff }: EnergyFlowDiagramProps) {
   // Calculate power values in kW
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;

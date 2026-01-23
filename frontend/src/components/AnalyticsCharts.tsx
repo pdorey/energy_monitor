@@ -28,7 +28,6 @@ interface AnalyticsChartsProps {
 
 export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
   const [displayedData, setDisplayedData] = useState<IntradayDataPoint[]>([]);
-  const [animationIndex, setAnimationIndex] = useState(0);
 
   // Parse time string (e.g., "12:30") to minutes since midnight
   const timeToMinutes = (timeStr: string): number => {
@@ -40,7 +39,6 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
   useEffect(() => {
     if (!currentTime || data.length === 0) {
       setDisplayedData([]);
-      setAnimationIndex(0);
       return;
     }
 
@@ -55,7 +53,6 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
     
     // Show data up to current index (animate from 00:00 to current time)
     setDisplayedData(data.slice(0, idx + 1));
-    setAnimationIndex(idx);
   }, [currentTime, data]);
 
   // Format time for X-axis

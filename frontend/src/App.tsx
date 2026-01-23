@@ -216,7 +216,6 @@ export function App() {
               displayTime={consumptionData?.time}
               buildingConsumption={consumptionData?.building_consumption}
               solarProduction={consumptionData?.solar_production}
-              spotPrice={consumptionData?.spot_price}
               buyPrice={consumptionData?.buy_price}
               exportPrice={consumptionData?.export_price}
               tariff={consumptionData?.tariff}
