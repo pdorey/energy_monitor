@@ -19,6 +19,9 @@ npm-debug.log*
 # Docker
 *.log
 
+# Database (external volume - do not commit)
+data/
+
 # IDE
 .vscode/
 .idea/

@@ -195,16 +195,21 @@ fi
 
 print_success "Backend files verified"
 
-# Step 6: Stop existing containers
-print_status "Step 6: Stopping existing containers..."
+# Step 6: Ensure data directory exists for external database
+print_status "Step 6: Ensuring data directory exists..."
+mkdir -p ./data
+print_success "Data directory ready at: $SCRIPT_DIR/data"
+
+# Step 7: Stop existing containers
+print_status "Step 7: Stopping existing containers..."
 if $DOCKER_COMPOSE_CMD down; then
     print_success "Containers stopped"
 else
     print_warning "Some containers may not have been running (this is OK)"
 fi
 
-# Step 7: Rebuild and start containers
-print_status "Step 7: Rebuilding Docker images (this may take a few minutes)..."
+# Step 8: Rebuild and start containers
+print_status "Step 8: Rebuilding Docker images (this may take a few minutes)..."
 print_status "Building backend image with frontend assets..."
 
 if $DOCKER_COMPOSE_CMD build --no-cache; then
@@ -222,12 +227,12 @@ else
     exit 1
 fi
 
-# Step 8: Wait for containers to start
-print_status "Step 8: Waiting for containers to initialize..."
+# Step 9: Wait for containers to start
+print_status "Step 9: Waiting for containers to initialize..."
 sleep 5
 
-# Step 9: Check container status
-print_status "Step 9: Checking container status..."
+# Step 10: Check container status
+print_status "Step 10: Checking container status..."
 if $DOCKER_COMPOSE_CMD ps; then
     print_success "Container status check complete"
     
@@ -242,12 +247,12 @@ else
     print_warning "Could not get container status"
 fi
 
-# Step 10: Show recent logs
-print_status "Step 10: Recent container logs:"
+# Step 11: Show recent logs
+print_status "Step 11: Recent container logs:"
 $DOCKER_COMPOSE_CMD logs --tail=30
 
-# Step 11: Health check with retries
-print_status "Step 11: Performing health check..."
+# Step 12: Health check with retries
+print_status "Step 12: Performing health check..."
 HEALTH_CHECK_PASSED=0
 for i in {1..5}; do
     sleep 2
@@ -275,7 +280,7 @@ else
     print_warning "Check container status with: $DOCKER_COMPOSE_CMD ps"
 fi
 
-# Step 12: Summary
+# Step 13: Summary
 echo ""
 print_success "=========================================="
 print_success "  Deployment Complete!"

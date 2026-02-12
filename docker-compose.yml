@@ -9,6 +9,10 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - ENERGY_MONITOR_DB_PATH=/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
