@@ -5,7 +5,7 @@ import os
 import random
 from collections import deque
 from datetime import datetime, timedelta, timezone
-from typing import Deque, Dict, List
+from typing import Deque, Dict, List, Optional
 
 from .models import (
     Snapshot,
@@ -18,32 +18,64 @@ from .models import (
     TimeseriesPoint,
     AnalyticsResponse,
     AnalyticsSeries,
+    ThreePhaseMetrics,
 )
+
+
+def _parse_float(row: dict, field: str) -> float:
+    val = (row.get(field) or "").strip()
+    try:
+        return float(val) if val else 0.0
+    except ValueError:
+        return 0.0
+
+
+def _synthetic_three_phase(total_power_w: float) -> ThreePhaseMetrics:
+    """Generate balanced 3-phase with small random imbalance."""
+    base = total_power_w / 3.0
+    imbalance = 0.08
+    l1 = base * (1 + random.uniform(-imbalance, imbalance))
+    l2 = base * (1 + random.uniform(-imbalance, imbalance))
+    l3 = total_power_w - l1 - l2
+    v = 230.0 + random.uniform(-3, 3)
+    return ThreePhaseMetrics(
+        l1_voltage_v=v,
+        l2_voltage_v=v + random.uniform(-1, 1),
+        l3_voltage_v=v + random.uniform(-1, 1),
+        l1_current_a=l1 / v if v > 0 else 0,
+        l2_current_a=l2 / v if v > 0 else 0,
+        l3_current_a=l3 / v if v > 0 else 0,
+        l1_power_w=l1,
+        l2_power_w=l2,
+        l3_power_w=l3,
+        total_power_w=total_power_w,
+        frequency_hz=50.0 + random.uniform(-0.05, 0.05),
+        power_factor=0.98 + random.uniform(0, 0.02),
+    )
 
 
 class Simulator:
     """
-    CSV‑driven energy simulator.
+    7-day energy simulator with weekday/weekend profiles.
 
-    All building, grid, battery, solar power and battery SOC values come directly
-    from `Consumption.csv` in 15‑minute steps over a 24‑hour period. When the
-    last row is reached, the simulator loops back to the first row and repeats
-    the 24‑hour cycle indefinitely.
-
-    The simulator simply walks row‑by‑row through the CSV on each call to
-    `generate_snapshot`, without using real time.
+    Uses Consumption.csv as base (96 rows, 15-min intervals = 24h weekday).
+    - Mon-Fri: weekday profile from CSV, randomized
+    - Sat-Sun: weekend profile (reduced load ~40% for office building)
+    - Equipment: solar, battery, grid, load, EV charger, heat pump
+    - 3-phase: synthetic L1/L2/L3 for grid and load
     """
 
     BATTERY_CAPACITY_KWH = 400.0
+    SLOTS_PER_DAY = 96
+    DAYS = 7
+    TOTAL_SLOTS = SLOTS_PER_DAY * DAYS
 
     def __init__(self, history_hours: int = 24, step_seconds: int = 900) -> None:
-        # Load CSV once at startup. We mirror the path resolution logic in main.py
-        # so this works both in local dev and inside Docker.
         here = os.path.dirname(__file__)
         candidates = [
-            os.path.abspath(os.path.join(here, "..", "..")),  # repo root in local dev
-            os.path.abspath(os.path.join(here, "..")),        # /app in Docker
-            os.getcwd(),                                      # fallback: current working directory
+            os.path.abspath(os.path.join(here, "..", "..")),
+            os.path.abspath(os.path.join(here, "..")),
+            os.getcwd(),
         ]
         root_dir = candidates[0]
         for candidate in candidates:
@@ -52,40 +84,33 @@ class Simulator:
                 break
 
         consumption_csv = os.path.join(root_dir, "Consumption.csv")
-        self._rows: list[dict] = []
-        self._csv_path = consumption_csv  # Store for diagnostics
-        
+        self._weekday_rows: list[dict] = []
+        self._csv_path = consumption_csv
+
         if os.path.exists(consumption_csv):
             try:
                 with open(consumption_csv, newline="", encoding="utf-8") as f:
                     reader = csv.DictReader(f)
-                    cleaned_rows: list[dict] = []
                     for row in reader:
                         if not any(row.values()):
                             continue
-                        # Normalise header keys to avoid BOM / whitespace issues
                         row_clean = {
                             (k or "").strip().lstrip("\ufeff"): v for k, v in row.items()
                         }
-                        cleaned_rows.append(row_clean)
-                    self._rows = cleaned_rows
-                print(f"[Simulator] Loaded {len(self._rows)} rows from {consumption_csv}")
+                        self._weekday_rows.append(row_clean)
+                print(f"[Simulator] Loaded {len(self._weekday_rows)} weekday rows from {consumption_csv}")
             except Exception as e:
-                print(f"[Simulator] ERROR loading CSV from {consumption_csv}: {e}")
-                self._rows = []
+                print(f"[Simulator] ERROR loading CSV: {e}")
         else:
             print(f"[Simulator] WARNING: Consumption.csv not found at {consumption_csv}")
 
-        self._row_count = len(self._rows)
-        self._index = 0  # current row index (0..row_count-1)
-        self._last_index = 0  # last row index used for snapshot
-
-        # Initial SOC from first row if available, otherwise default
+        self._slot = 0
+        self._last_slot = 0
+        self._last_processed_row: Optional[dict] = None
+        self._last_snapshot: Optional[Snapshot] = None
         self.battery_soc = 91.0
-        if self._row_count:
-            soc_raw = (self._rows[0].get("BATTERY SOC") or "").strip()
-            if soc_raw.endswith("%"):
-                soc_raw = soc_raw[:-1]
+        if self._weekday_rows:
+            soc_raw = (self._weekday_rows[0].get("BATTERY SOC") or "").strip().rstrip("%")
             if soc_raw:
                 try:
                     self.battery_soc = float(soc_raw)
@@ -100,75 +125,140 @@ class Simulator:
             "load_kw": deque(maxlen=max_points),
         }
 
-    # --- internal helpers -------------------------------------------------
+    def _is_weekend(self, slot: int) -> bool:
+        day = slot // self.SLOTS_PER_DAY
+        return day >= 5  # Saturday=5, Sunday=6
 
-    def _current_row(self) -> dict | None:
-        """Return the row currently pointed to by the simulator index."""
-        if not self._row_count:
+    def _get_row_for_slot(self, slot: int) -> Optional[dict]:
+        if not self._weekday_rows:
             return None
-        return self._rows[self._index]
+        csv_idx = slot % self.SLOTS_PER_DAY
+        row = self._weekday_rows[csv_idx].copy()
+        return row
 
-    def get_current_row(self) -> dict | None:
-        """
-        Public helper for other parts of the app (e.g. /api/consumption-data)
-        to see the row used for the most recent snapshot.
-        """
-        if not self._row_count:
+    def _apply_randomization(self, val: float) -> float:
+        return val * (1 + random.uniform(-0.1, 0.1))
+
+    def _get_current_row(self) -> Optional[dict]:
+        slot = self._slot
+        row = self._get_row_for_slot(slot)
+        if row is None:
             return None
-        return self._rows[self._last_index]
+        is_weekend = self._is_weekend(slot)
+        csv_idx = slot % self.SLOTS_PER_DAY
+        slot_in_day = csv_idx % 24 * 4 + (csv_idx // 24)  # rough hour*4 for 15-min
+        hour_frac = csv_idx / self.SLOTS_PER_DAY  # 0..1 for time of day
+
+        building_load_kw = _parse_float(row, "BUILDING LOAD PWR")
+        grid_kw = _parse_float(row, "GRID PWR")
+        battery_kw = _parse_float(row, "BATTERY PWR")
+        solar_kw = _parse_float(row, "SOLAR PWR")
+
+        if is_weekend:
+            building_load_kw *= 0.4
+            solar_kw *= 1.0  # same solar curve
+            battery_kw *= 0.5
+            grid_kw = building_load_kw - solar_kw - battery_kw
+
+        building_load_kw = max(0, self._apply_randomization(building_load_kw))
+        solar_kw = max(0, self._apply_randomization(solar_kw))
+        battery_kw = self._apply_randomization(battery_kw)
+        grid_kw = self._apply_randomization(building_load_kw - solar_kw - battery_kw) if is_weekend else self._apply_randomization(grid_kw)
+
+        soc_raw = (row.get("BATTERY SOC") or "").strip().rstrip("%")
+        if soc_raw:
+            try:
+                self.battery_soc = float(soc_raw)
+                if is_weekend:
+                    self.battery_soc *= (0.9 + random.uniform(0, 0.1))
+            except ValueError:
+                pass
+        self.battery_soc = max(0, min(100, self.battery_soc))
+
+        # EV: charging during office hours (slots 32-72 = 8h-18h), ~20kW when charging
+        ev_kw = 0.0
+        if 32 <= csv_idx <= 72 and not is_weekend:
+            ev_kw = 15.0 + random.uniform(-5, 5)
+        ev_kw = max(0, ev_kw)
+
+        # Heat pump: HVAC ~15% of load, cooling in afternoon
+        heat_pump_kw = building_load_kw * 0.15
+        if hour_frac > 0.4:  # afternoon
+            heat_pump_kw *= 1.2
+        heat_pump_kw = max(0, self._apply_randomization(heat_pump_kw))
+
+        return {
+            "building_load_kw": building_load_kw,
+            "grid_kw": grid_kw,
+            "battery_kw": battery_kw,
+            "solar_kw": solar_kw,
+            "battery_soc": self.battery_soc,
+            "ev_kw": ev_kw,
+            "heat_pump_kw": heat_pump_kw,
+            "spot_price": _parse_float(row, "SPOT PRICE"),
+            "tariff": (row.get("TARIFF") or "").strip(),
+        }
+
+    def get_current_row(self) -> Optional[dict]:
+        """Row used for /api/consumption-data - format compatible with CSV columns."""
+        if self._last_processed_row is None:
+            return None
+        slot = self._last_slot
+        csv_idx = slot % self.SLOTS_PER_DAY
+        hour = (csv_idx // 4) % 24
+        minute = (csv_idx % 4) * 15
+        time_str = f"{hour:02d}:{minute:02d}"
+        r = self._last_processed_row
+        return {
+            "TIME": time_str,
+            "PATH": "a",
+            "BUILDING LOAD PWR": str(r["building_load_kw"]),
+            "BUILDING LOAD LABEL": "Grid only",
+            "GRID PWR": str(r["grid_kw"]),
+            "GRID LABEL": "Importing",
+            "BATTERY PWR": str(r["battery_kw"]),
+            "BATTERY LABEL": "Idle",
+            "BATTERY SOC": f"{r['battery_soc']:.0f}%",
+            "SOLAR PWR": str(r["solar_kw"]),
+            "SOLAR LABEL": "Active" if r["solar_kw"] > 0 else "Inactive",
+            "BUILDING CONSUMPTION": "0",
+            "GRID ENERGY": "0",
+            "SOLAR PRODUCTION": "0",
+            "BATTERY": "0",
+            "SPOT PRICE": str(r["spot_price"]),
+            "TARIFF": r["tariff"],
+            "BUY PRICE": str(r["spot_price"] * 3.2),
+            "EXPORT PRICE": str(r["spot_price"] * 0.8),
+        }
 
     def get_all_rows(self) -> list[dict]:
-        """
-        Public helper to get all CSV rows for analytics.
-        """
-        return self._rows.copy() if self._rows else []
-
-    # --- public API -------------------------------------------------------
+        return self._weekday_rows.copy() if self._weekday_rows else []
 
     def generate_snapshot(self) -> Snapshot:
         now = datetime.now(timezone.utc)
-        row = self._current_row()
-        self._last_index = self._index
-        if self._row_count:
-            # advance to next row for the next call
-            self._index = (self._index + 1) % self._row_count
+        self._last_slot = self._slot
+        row = self._get_current_row()
+        self._last_processed_row = row
+        self._slot = (self._slot + 1) % self.TOTAL_SLOTS
 
-        # Defaults if CSV is missing
-        building_load_w = 0.0
-        grid_w = 0.0
-        battery_w = 0.0
-        pv_w = 0.0
+        if row is None:
+            row = {
+                "building_load_kw": 0.0,
+                "grid_kw": 0.0,
+                "battery_kw": 0.0,
+                "solar_kw": 0.0,
+                "battery_soc": self.battery_soc,
+                "ev_kw": 0.0,
+                "heat_pump_kw": 0.0,
+                "spot_price": 0.0,
+                "tariff": "",
+            }
 
-        if row is not None:
-            def parse_float(field: str) -> float:
-                val = (row.get(field) or "").strip()
-                try:
-                    return float(val) if val else 0.0
-                except ValueError:
-                    return 0.0
+        building_load_w = row["building_load_kw"] * 1000.0
+        grid_w = row["grid_kw"] * 1000.0
+        battery_w = row["battery_kw"] * 1000.0
+        pv_w = row["solar_kw"] * 1000.0
 
-            # kW values from CSV
-            building_load_kw = parse_float("BUILDING LOAD PWR")
-            grid_kw = parse_float("GRID PWR")
-            battery_kw = parse_float("BATTERY PWR")
-            solar_kw = parse_float("SOLAR PWR")
-
-            building_load_w = building_load_kw * 1000.0
-            grid_w = grid_kw * 1000.0
-            battery_w = battery_kw * 1000.0
-            pv_w = solar_kw * 1000.0
-
-            # Battery SOC from CSV (e.g. "91%")
-            soc_raw = (row.get("BATTERY SOC") or "").strip()
-            if soc_raw.endswith("%"):
-                soc_raw = soc_raw[:-1]
-            if soc_raw:
-                try:
-                    self.battery_soc = float(soc_raw)
-                except ValueError:
-                    pass
-
-        # Slight randomness only for voltages/temperature for realism
         solar = SolarMetrics(
             power_w=pv_w,
             voltage_v=230.0 + random.uniform(-2, 2),
@@ -176,7 +266,7 @@ class Simulator:
         )
         battery = BatteryMetrics(
             power_w=battery_w,
-            soc_percent=self.battery_soc,
+            soc_percent=row["battery_soc"],
             capacity_kwh=self.BATTERY_CAPACITY_KWH,
             voltage_v=400.0 + random.uniform(-5, 5),
             temperature_c=25.0 + abs(battery_w) / 1000.0,
@@ -193,27 +283,45 @@ class Simulator:
             current_a=building_load_w / 230.0 if building_load_w > 0 else 0.0,
         )
 
+        three_phase = {
+            "grid": _synthetic_three_phase(grid_w).model_dump(),
+            "load": _synthetic_three_phase(building_load_w).model_dump(),
+        }
+        ev = {
+            "power_w": row["ev_kw"] * 1000,
+            "soc_percent": 0.0,
+            "charging_state": 2 if row["ev_kw"] > 0 else 0,
+        }
+        heat_pump = {
+            "power_w": row["heat_pump_kw"] * 1000,
+            "mode": "cool" if now.hour >= 12 else "heat",
+            "setpoint_c": 22.0,
+        }
+
         snapshot = Snapshot(
             timestamp=now,
             solar=solar,
             battery=battery,
             grid=grid,
             load=load,
+            three_phase=three_phase,
+            ev=ev,
+            heat_pump=heat_pump,
         )
 
-        # store in history (kW, SOC)
         self.history["solar_kw"].append(TimeseriesPoint(t=now, v=snapshot.solar.power_w / 1000.0))
         self.history["battery_soc"].append(TimeseriesPoint(t=now, v=snapshot.battery.soc_percent))
         self.history["grid_kw"].append(TimeseriesPoint(t=now, v=snapshot.grid.power_w / 1000.0))
         self.history["load_kw"].append(TimeseriesPoint(t=now, v=snapshot.load.power_w / 1000.0))
 
+        self._last_snapshot = snapshot
         return snapshot
 
     def build_overview(self, snapshot: Snapshot, uptime_seconds: int) -> Overview:
         return Overview(
             timestamp=snapshot.timestamp,
-            total_equipment=4,
-            online_equipment=4,
+            total_equipment=6,
+            online_equipment=6,
             uptime_seconds=uptime_seconds,
             solar_kw=snapshot.solar.power_w / 1000.0,
             battery_kw=snapshot.battery.power_w / 1000.0,
@@ -223,6 +331,8 @@ class Simulator:
         )
 
     def build_equipment(self, snapshot: Snapshot) -> List[EquipmentItem]:
+        ev_pwr = snapshot.ev.get("power_w", 0) if snapshot.ev else 0
+        hp_pwr = snapshot.heat_pump.get("power_w", 0) if snapshot.heat_pump else 0
         return [
             EquipmentItem(
                 equipment_id="solar_001",
@@ -272,6 +382,29 @@ class Simulator:
                     "voltage_v": snapshot.load.voltage_v,
                 },
             ),
+            EquipmentItem(
+                equipment_id="ev_001",
+                name="EV Charger",
+                type="ev",
+                status="online",
+                location="Parking",
+                metrics={
+                    "power_w": ev_pwr,
+                    "charging_state": snapshot.ev.get("charging_state", 0) if snapshot.ev else 0,
+                },
+            ),
+            EquipmentItem(
+                equipment_id="heat_pump_001",
+                name="Heat Pump HVAC",
+                type="heat_pump",
+                status="online",
+                location="HVAC Room",
+                metrics={
+                    "power_w": hp_pwr,
+                    "mode": snapshot.heat_pump.get("mode", "idle") if snapshot.heat_pump else "idle",
+                    "setpoint_c": snapshot.heat_pump.get("setpoint_c", 22) if snapshot.heat_pump else 22,
+                },
+            ),
         ]
 
     def build_analytics(self, hours: int, resolution_minutes: int) -> AnalyticsResponse:
@@ -306,4 +439,3 @@ class Simulator:
         ]
 
         return AnalyticsResponse(from_ts=from_ts, to_ts=now, series=series)
-

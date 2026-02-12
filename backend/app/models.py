@@ -1,11 +1,26 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List, Literal
+from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel
 
 
-EquipmentType = Literal["solar", "battery", "grid", "load"]
+EquipmentType = Literal["solar", "battery", "grid", "load", "ev", "heat_pump"]
+
+
+class ThreePhaseMetrics(BaseModel):
+    l1_voltage_v: float
+    l2_voltage_v: float
+    l3_voltage_v: float
+    l1_current_a: float
+    l2_current_a: float
+    l3_current_a: float
+    l1_power_w: float
+    l2_power_w: float
+    l3_power_w: float
+    total_power_w: float
+    frequency_hz: float = 50.0
+    power_factor: float = 0.99
 
 
 class SolarMetrics(BaseModel):
@@ -41,6 +56,9 @@ class Snapshot(BaseModel):
     battery: BatteryMetrics
     grid: GridMetrics
     load: LoadMetrics
+    three_phase: Optional[Dict[str, Any]] = None  # {"grid": ThreePhaseMetrics, "load": ThreePhaseMetrics}
+    ev: Optional[Dict[str, float]] = None  # {"power_w": float, "soc_percent": float, "charging_state": int}
+    heat_pump: Optional[Dict[str, Any]] = None  # {"power_w": float, "mode": str, "setpoint_c": float}
 
 
 class Overview(BaseModel):

@@ -15,6 +15,9 @@ from fastapi.staticfiles import StaticFiles
 
 from .models import Overview, EquipmentItem, AnalyticsResponse, Snapshot
 from .simulator import Simulator
+from .config import use_simulator, get_retention_days, get_mode, get_mode
+from .db import get_repository
+from .routers import weather, prices, phases, erse_tariffs, usage_profiles
 
 
 def _resolve_root_dir() -> str:
@@ -48,11 +51,63 @@ clients: Set[WebSocket] = set()
 start_time = datetime.now(timezone.utc)
 
 
+async def collector_loop():
+    """Background loop: run collectors when in live mode, retention daily."""
+    from .collectors import OpenMeteoCollector, fetch_prices_with_fallback
+    from .collectors import EntsoeCollector, EsiosCollector
+    repo = get_repository()
+    open_meteo = OpenMeteoCollector(repo)
+    entsoe = EntsoeCollector(repo)
+    esios = EsiosCollector(repo)
+    retention_days = get_retention_days()
+    last_retention = 0
+    last_weather = 0
+    last_prices = 0
+    while True:
+        await asyncio.sleep(60)  # Check every minute
+        now = datetime.now(timezone.utc).timestamp()
+        if use_simulator():
+            continue
+        # Run retention once per day
+        if now - last_retention > 86400:
+            try:
+                deleted = repo.run_retention(retention_days)
+                if deleted:
+                    print(f"[Retention] Deleted {deleted} old rows")
+                last_retention = now
+            except Exception as e:
+                print(f"[Retention] Error: {e}")
+        # Weather every 6h
+        if now - last_weather > 6 * 3600:
+            try:
+                if await open_meteo.run():
+                    last_weather = now
+            except Exception as e:
+                print(f"[OpenMeteo] Error: {e}")
+        # Prices every 1h (ENTSO-E primary, ESIOS fallback)
+        if now - last_prices > 3600:
+            try:
+                if await fetch_prices_with_fallback(entsoe, esios):
+                    last_prices = now
+            except Exception as e:
+                print(f"[Prices] Error: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global sim
     sim = Simulator()
+    app.state.sim = sim
     asyncio.create_task(broadcast_loop())
+    asyncio.create_task(collector_loop())
+    if use_simulator():
+        try:
+            from .ai import build_usage_profiles
+            n = build_usage_profiles(profile_id="default", source="csv")
+            if n:
+                print(f"[AI] Built {n} usage profile rows")
+        except Exception as e:
+            print(f"[AI] Profile build skipped: {e}")
     yield
     # nothing to cleanup yet
 
@@ -70,6 +125,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Routers for new endpoints
+app.include_router(weather.router)
+app.include_router(prices.router)
+app.include_router(phases.router)
+app.include_router(erse_tariffs.router)
+app.include_router(usage_profiles.router)
 
 # static SPA (built frontend)
 STATIC_DIR = os.path.join(ROOT_DIR, "frontend_dist")
@@ -101,6 +163,8 @@ async def debug_info():
     Useful for debugging path issues in Docker.
     """
     info = {
+        "mode": get_mode(),
+        "use_simulator": use_simulator(),
         "paths": {
             "root_dir": ROOT_DIR,
             "consumption_csv": CONSUMPTION_CSV,
@@ -118,10 +182,9 @@ async def debug_info():
     }
 
     if sim:
-        # Access private attributes for diagnostics
-        info["simulator"]["row_count"] = getattr(sim, "_row_count", 0)
-        info["simulator"]["current_index"] = getattr(sim, "_index", 0)
-        info["simulator"]["last_index"] = getattr(sim, "_last_index", 0)
+        info["simulator"]["row_count"] = len(getattr(sim, "_weekday_rows", []))
+        info["simulator"]["current_slot"] = getattr(sim, "_slot", 0)
+        info["simulator"]["last_slot"] = getattr(sim, "_last_slot", 0)
         info["simulator"]["battery_soc"] = getattr(sim, "battery_soc", None)
 
         # Try to get current row

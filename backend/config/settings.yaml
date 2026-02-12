@@ -1,0 +1,29 @@
+# Energy Monitor Configuration
+# Override via environment variables (see config.py)
+
+# Data source: "simulator" | "live"
+mode: simulator
+
+# SQLite
+database_path: data
+retention_days: 7
+
+# Collectors (when mode=live)
+open_meteo:
+  latitude: 38.7
+  longitude: -9.1
+  fetch_interval_hours: 6
+
+entsoe:
+  zone: "10YPT-REN------1"  # Portugal (primary)
+  fetch_interval_hours: 1
+
+esios:
+  # Fallback when ENTSO-E unavailable; Iberian market covers Portugal
+  # api_key: set via ESIOS_API_KEY
+
+huawei:
+  # username, password, station_code via env
+
+# ERSE (Portugal) - stored in DB table erse_tariff_definitions
+# Active tariff resolved by timestamp; configurable via API or seed migration
