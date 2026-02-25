@@ -41,14 +41,6 @@ interface EnergyFlowDiagramProps {
   tariff?: string;
 }
 
-interface EnergyFlow {
-  from: string;
-  to: string;
-  powerKw: number;
-  color: string;
-  source?: string; // Track energy source: "solar", "battery", "grid"
-}
-
 // Flow colors based on energy source
 const flowColors = {
   solar: "rgb(251, 191, 36)", // Yellow/Orange - solar energy
@@ -58,7 +50,7 @@ const flowColors = {
 };
 
 
-export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDefinitions = [], labels, displayTime, buildingConsumption, solarProduction, buyPrice, exportPrice, tariff }: EnergyFlowDiagramProps) {
+export function EnergyFlowDiagram({ snapshot, overview, displayTime, buildingConsumption, solarProduction, buyPrice, exportPrice, tariff }: EnergyFlowDiagramProps) {
   // Calculate power values in kW
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
@@ -66,238 +58,111 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   const loadKw = snapshot?.load.power_w ? snapshot.load.power_w / 1000 : overview?.load_kw ?? 0;
   const soc = snapshot?.battery.soc_percent ?? overview?.battery_soc_percent ?? 0;
 
-  // Calculate energy flows with proper source tracking
-  const flows = useMemo<EnergyFlow[]>(() => {
-    const flows: EnergyFlow[] = [];
-    const threshold = 0.1;
-    
-    // Battery: negative = charging, positive = discharging
-    // Grid: positive = importing, negative = exporting
-    const batteryCharging = batteryKw < -threshold;
-    const batteryDischarging = batteryKw > threshold;
-    const batteryChargePower = Math.abs(batteryKw);
-    const gridImporting = gridKw > threshold;
-    const gridExporting = gridKw < -threshold;
+  // Compact box dimensions
+  const boxWidth = 88;
+  const boxHeight = 56;
+  const boxInfoWidth = 120;
+  const boxInfoHeight = 64;
 
-    // Calculate how solar is distributed
-    let solarRemaining = solarKw;
-    
-    // 1. Solar to Inverter (always when generating)
-    if (solarKw > threshold) {
-      flows.push({
-        from: "solar",
-        to: "inverter",
-        powerKw: solarKw,
-        color: flowColors.solar,
-        source: "solar",
-      });
-    }
+  // Layout: Compact diagram
+  const gridMeterX = 70;
+  const inverterX = 200;
+  const batteryX = 330;
+  const rightBoxesX = 520;
 
-    // 2. Battery charging from inverter (solar)
-    if (batteryCharging && solarKw > threshold) {
-      const solarForBattery = Math.min(solarKw, batteryChargePower);
-      flows.push({
-        from: "inverter",
-        to: "battery",
-        powerKw: solarForBattery,
-        color: flowColors.solar, // Yellow (from solar)
-        source: "solar",
-      });
-      solarRemaining -= solarForBattery;
-    }
-
-    // 3. Battery discharging to inverter
-    if (batteryDischarging) {
-      flows.push({
-        from: "battery",
-        to: "inverter",
-        powerKw: batteryKw,
-        color: flowColors.battery, // Green (from battery)
-        source: "battery",
-      });
-    }
-
-    // 4. Inverter to Building (from solar or battery)
-    const solarToBuilding = Math.max(0, Math.min(solarRemaining, loadKw));
-    const batteryToBuilding = batteryDischarging ? Math.min(batteryKw, loadKw - solarToBuilding) : 0;
-    const inverterToBuilding = solarToBuilding + batteryToBuilding;
-    
-    if (inverterToBuilding > threshold) {
-      // Determine color based on source
-      let buildingColor = flowColors.solar; // Default to solar
-      if (batteryToBuilding > solarToBuilding) {
-        buildingColor = flowColors.battery; // More from battery
-      } else if (solarToBuilding > 0) {
-        buildingColor = flowColors.solar; // From solar
-      }
-      
-      flows.push({
-        from: "inverter",
-        to: "building",
-        powerKw: inverterToBuilding,
-        color: buildingColor,
-        source: batteryToBuilding > solarToBuilding ? "battery" : "solar",
-      });
-    }
-
-    // 5. Inverter to Grid Meter (export - from solar or battery)
-    const solarExcess = Math.max(0, solarRemaining - solarToBuilding);
-    const batteryExport = batteryDischarging ? Math.max(0, batteryKw - batteryToBuilding) : 0;
-    const inverterToGrid = solarExcess + batteryExport;
-    
-    if (inverterToGrid > threshold) {
-      // Color based on source: Yellow if from solar, Green if from battery
-      const exportColor = solarExcess > batteryExport ? flowColors.solar : flowColors.battery;
-      flows.push({
-        from: "inverter",
-        to: "gridMeter",
-        powerKw: inverterToGrid,
-        color: exportColor,
-        source: solarExcess > batteryExport ? "solar" : "battery",
-      });
-    }
-
-    // 6. Grid Meter to Grid (exporting)
-    if (gridExporting) {
-      flows.push({
-        from: "gridMeter",
-        to: "grid",
-        powerKw: Math.abs(gridKw),
-        color: flowColors.grid, // Red (exporting)
-        source: "grid",
-      });
-    }
-
-    // 7. Grid to Grid Meter (importing)
-    if (gridImporting) {
-      flows.push({
-        from: "grid",
-        to: "gridMeter",
-        powerKw: gridKw,
-        color: flowColors.grid, // Red (from grid)
-        source: "grid",
-      });
-    }
-
-    // 8. Grid Meter to Inverter (when importing)
-    if (gridImporting) {
-      // Grid supplies what building needs beyond what inverter can provide
-      const gridMeterToInverter = Math.max(0, loadKw - inverterToBuilding);
-      if (gridMeterToInverter > threshold) {
-        flows.push({ 
-          from: "gridMeter",
-          to: "inverter",
-          powerKw: gridMeterToInverter,
-          color: flowColors.grid, // Red (from grid)
-          source: "grid",
-        });
-      }
-    }
-
-    // 9. Grid Meter to Building (direct from grid when importing)
-    if (gridImporting) {
-      const gridToBuilding = Math.max(0, gridKw - (loadKw - inverterToBuilding));
-      if (gridToBuilding > threshold) {
-        flows.push({
-          from: "gridMeter",
-          to: "building",
-          powerKw: gridToBuilding,
-          color: flowColors.grid, // Red (from grid)
-          source: "grid",
-        });
-      }
-    }
-
-    return flows;
-  }, [solarKw, batteryKw, gridKw, loadKw]);
-
-  // Component box dimensions and positions
-  const boxWidth = 140;
-  const boxHeight = 100;
-  const boxInfoWidth = 200;
-  const boxInfoHeight = 100;
-
-  // Layout: Diagram moved to the left, new boxes on the right
-  // Building directly above inverter, Solar directly below inverter
-  // Grid below Grid Meter
-  // Spacing: Grid Meter to Inverter = Inverter to Battery
-  const gridMeterX = 100;  // Moved left
-  const inverterX = 300;   // Moved left
-  const batteryX = inverterX + (inverterX - gridMeterX); // Equal spacing: 400 + (400-200) = 600
-  const rightBoxesX = 800; // Position for new boxes on the right
-  
   const positions = {
-    building: { x: inverterX, y: 50 },      // Directly above inverter
-    grid: { x: gridMeterX, y: 350 },         // Below gridMeter
-    gridMeter: { x: gridMeterX, y: 200 },
-    inverter: { x: inverterX, y: 200 },  // Center
-    solar: { x: inverterX, y: 350 },        // Directly below inverter
-    battery: { x: batteryX, y: 200 },  // Equal spacing from inverter
-    // New boxes on the right
-    dailyConsumption: { x: rightBoxesX, y: 100 },
-    dailySolar: { x: rightBoxesX, y: 220 },
-    marketPrices: { x: rightBoxesX, y: 340 },
+    building: { x: inverterX, y: 36 },
+    grid: { x: gridMeterX, y: 220 },
+    gridMeter: { x: gridMeterX, y: 128 },
+    inverter: { x: inverterX, y: 128 },
+    solar: { x: inverterX, y: 220 },
+    battery: { x: batteryX, y: 128 },
+    dailyConsumption: { x: rightBoxesX, y: 64 },
+    dailySolar: { x: rightBoxesX, y: 140 },
+    marketPrices: { x: rightBoxesX, y: 216 },
   };
 
-  // Define ALL possible interconnections (always visible)
-  // Exact layout per PowerPoint:
-  // 1. Grid ↔ Grid Meter: 2 horizontal lines
-  // 2. Grid Meter ↔ Inverter: 2 horizontal lines  
-  // 3. Inverter ↔ Battery: 3 horizontal lines
-  // 4. Solar ↔ Inverter: 1 vertical line (center to center)
-  // 5. Inverter ↔ Building: 2 vertical lines (with 40%/60% offsets)
-  // 6. Grid Meter ↔ Building: 1 right-angle line (top of grid meter to left of building)
+  // One connector per box: dominant flow only. Color = source (yellow=solar, green=battery, red=grid)
   type Side = "top" | "bottom" | "left" | "right";
-  // Offset is interpreted along the relevant dimension:
-  // - For vertical sides (top/bottom): left/right mean 40%/60% of width, center = 50%
-  // - For horizontal sides (left/right): left/right mean 40%/60% of height, center = 50%
-  type Offset = "left" | "right" | "center";
-  const staticConnections: Array<{
-    from: string;
-    to: string;
-    sideFrom: Side;
-    sideTo: Side;
-    offsetFrom?: Offset;
-    offsetTo?: Offset;
-    isRightAngle?: boolean; // For special right-angle paths
-  }> = [
-    // Grid ↔ Grid Meter:
-    // Lines go from top of grid box to bottom of gridmeter box (vertical)
-    // 1) grid -> gridMeter (grid_pwr): 40% from left of both boxes
-    { from: "grid", to: "gridMeter", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "left" },
-    // 2) gridMeter -> grid (solar_pwr): 60% from left of both boxes
-    { from: "gridMeter", to: "grid", sideFrom: "bottom", sideTo: "top", offsetFrom: "right", offsetTo: "right" },
-    
-    // Grid Meter ↔ Inverter: 2 possible connections – depart from 40% and 60% of height
-    { from: "gridMeter", to: "inverter", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
-    { from: "inverter", to: "gridMeter", sideFrom: "left", sideTo: "right", offsetFrom: "right", offsetTo: "right" },
-    
-    // Inverter ↔ Battery:
-    // Top line (30% from top): battery_pwr source
-    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "left", offsetTo: "left" },
-    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "left", offsetTo: "left" },
-    // Middle line (50% from top): grid_pwr source
-    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "center", offsetTo: "center" },
-    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "center", offsetTo: "center" },
-    // Bottom line (70% from top): solar_pwr source
-    { from: "inverter", to: "battery", sideFrom: "right", sideTo: "left", offsetFrom: "right", offsetTo: "right" },
-    { from: "battery", to: "inverter", sideFrom: "left", sideTo: "right", offsetFrom: "right", offsetTo: "right" },
-    
-    // Solar ↔ Inverter: 1 vertical line (center to center)
-    { from: "solar", to: "inverter", sideFrom: "top", sideTo: "bottom", offsetFrom: "center", offsetTo: "center" },
-    
-    // Inverter ↔ Building:
-    // 1) inverter -> building (solar_pwr): 40% from left of inverter box to 40% from left of building box
-    { from: "inverter", to: "building", sideFrom: "top", sideTo: "bottom", offsetFrom: "left", offsetTo: "left" },
-    // 2) inverter -> building (battery_pwr): 60% from left of inverter box to 60% from left of building box
-    { from: "inverter", to: "building", sideFrom: "top", sideTo: "bottom", offsetFrom: "right", offsetTo: "right" },
-    // Reverse direction uses same physical paths (for completeness)
-    { from: "building", to: "inverter", sideFrom: "bottom", sideTo: "top", offsetFrom: "left", offsetTo: "left" },
-    { from: "building", to: "inverter", sideFrom: "bottom", sideTo: "top", offsetFrom: "right", offsetTo: "right" },
-    
-    // Grid Meter ↔ Building: 1 right-angle line (top of grid meter to left of building)
-    { from: "gridMeter", to: "building", sideFrom: "top", sideTo: "left", offsetFrom: "center", offsetTo: "center", isRightAngle: true },
-  ];
+  type SingleFlow = { from: string; to: string; powerKw: number; color: string; fromSide: Side; toSide: Side };
+
+  // Responsive scaling: diagram scales down on narrow viewports
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const diagramWidth = 680;
+  const diagramHeight = 320;
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const updateScale = () => {
+      const w = el.offsetWidth;
+      setScale(Math.min(1, w / diagramWidth));
+    };
+    updateScale();
+    const ro = new ResizeObserver(updateScale);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const singleFlows = useMemo<SingleFlow[]>(() => {
+    const threshold = 0.1;
+    const result: SingleFlow[] = [];
+
+    // Solar -> Inverter (yellow)
+    if (solarKw > threshold) {
+      result.push({
+        from: "solar", to: "inverter", powerKw: solarKw, color: flowColors.solar,
+        fromSide: "top", toSide: "bottom",
+      });
+    }
+
+    // Battery <-> Inverter (green)
+    if (Math.abs(batteryKw) > threshold) {
+      if (batteryKw > 0) {
+        result.push({ from: "battery", to: "inverter", powerKw: batteryKw, color: flowColors.battery, fromSide: "left", toSide: "right" });
+      } else {
+        result.push({ from: "inverter", to: "battery", powerKw: Math.abs(batteryKw), color: flowColors.battery, fromSide: "right", toSide: "left" });
+      }
+    }
+
+    // Grid <-> GridMeter (red)
+    if (Math.abs(gridKw) > threshold) {
+      if (gridKw > 0) {
+        result.push({ from: "grid", to: "gridMeter", powerKw: gridKw, color: flowColors.grid, fromSide: "top", toSide: "bottom" });
+      } else {
+        result.push({ from: "gridMeter", to: "grid", powerKw: Math.abs(gridKw), color: flowColors.grid, fromSide: "bottom", toSide: "top" });
+      }
+    }
+
+    // GridMeter <-> Inverter (red) - when grid supplies inverter
+    const gridImporting = gridKw > threshold;
+    const inverterToBuilding = Math.min(loadKw, solarKw + (batteryKw > 0 ? batteryKw : 0));
+    const gridToInverter = gridImporting ? Math.max(0, loadKw - inverterToBuilding) : 0;
+    if (gridToInverter > threshold) {
+      result.push({ from: "gridMeter", to: "inverter", powerKw: gridToInverter, color: flowColors.grid, fromSide: "right", toSide: "left" });
+    } else if (gridKw < -threshold) {
+      // Export: color by dominant source (solar or battery)
+      const solarExport = Math.min(solarKw, Math.abs(gridKw));
+      const batteryExport = Math.abs(gridKw) - solarExport;
+      const exportColor = solarExport >= batteryExport ? flowColors.solar : flowColors.battery;
+      result.push({ from: "inverter", to: "gridMeter", powerKw: Math.abs(gridKw), color: exportColor, fromSide: "left", toSide: "right" });
+    }
+
+    // Building: one connector from dominant source (inverter or grid)
+    const solarToBuilding = Math.min(solarKw, loadKw);
+    const batteryToBuilding = batteryKw > 0 ? Math.min(batteryKw, loadKw - solarToBuilding) : 0;
+    const invToBld = solarToBuilding + batteryToBuilding;
+    const gridToBuilding = gridImporting ? Math.min(gridKw, loadKw - invToBld) : 0;
+    if (invToBld >= gridToBuilding && invToBld > threshold) {
+      const buildingColor = batteryToBuilding > solarToBuilding ? flowColors.battery : flowColors.solar;
+      result.push({ from: "inverter", to: "building", powerKw: invToBld, color: buildingColor, fromSide: "top", toSide: "bottom" });
+    } else if (gridToBuilding > threshold) {
+      result.push({ from: "gridMeter", to: "building", powerKw: gridToBuilding, color: flowColors.grid, fromSide: "top", toSide: "left" });
+    }
+
+    return result;
+  }, [solarKw, batteryKw, gridKw, loadKw]);
 
   // Calculate connection points
   // When both nodes are inverter/battery, use 30%/50%/70% offsets
@@ -384,10 +249,8 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   const createRightAnglePath = (from: { x: number; y: number }, to: { x: number; y: number }, fromSide: Side, toSide: Side, isRightAngle?: boolean): string => {
     // Special right-angle path: from top to left (e.g., Grid Meter top to Building left)
     if (isRightAngle && fromSide === "top" && toSide === "left") {
-      // Go straight up from grid meter top, then horizontal to building left
-      const midY = from.y - 100; // Go up 100px first
-      const midX = to.x; // Then horizontal to building's X
-      return `M ${from.x} ${from.y} L ${from.x} ${midY} L ${midX} ${midY} L ${to.x} ${to.y}`;
+      const midY = Math.min(from.y - 20, to.y + 20);
+      return `M ${from.x} ${from.y} L ${from.x} ${midY} L ${to.x} ${midY} L ${to.x} ${to.y}`;
     }
     // Determine intermediate point for right angle
     let midX = from.x;
@@ -517,274 +380,58 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
   }, [displayTime, snapshot?.timestamp, overview?.timestamp]);
 
   return (
-    <div className="bg-slate-800/60 rounded-lg p-6 overflow-x-auto">
-      <div className="flex items-center mb-4">
-        <div className="text-base font-semibold uppercase text-slate-300">Energy Flow</div>
-        {/* Animated time display in top right */}
+    <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
+        <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">Energy Flow</div>
         {currentTime && (
-          <div className="ml-auto text-base font-semibold text-slate-300 font-mono">
+          <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">
             {currentTime}
           </div>
         )}
       </div>
-      <div className="relative" style={{ width: "900px", height: "450px", margin: "0 auto" }}>
-        <svg width="900" height="450" className="absolute inset-0">
-          {/* All static interconnection lines (always visible, gray when inactive) */}
-          {staticConnections.map((conn, idx) => {
-            const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom, conn.to);
-            const toPoint = getConnectionPoint(conn.to, conn.sideTo, conn.offsetTo, conn.from);
-            const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo, conn.isRightAngle);
-            
-            // All static lines are always visible (gray when inactive)
-            // Active lines are drawn on top with color and animation
+      <div
+        ref={containerRef}
+        className="w-full max-w-[680px] min-w-0 mx-auto overflow-hidden"
+        style={{ aspectRatio: `${diagramWidth}/${diagramHeight}` }}
+      >
+        <div
+          className="relative origin-top-left"
+          style={{
+            width: diagramWidth,
+            height: diagramHeight,
+            transform: `scale(${scale})`,
+          }}
+        >
+        <svg width="680" height="320" className="absolute inset-0">
+          {/* One connector per connection: colored by source (yellow=solar, green=battery, red=grid), direction shown by animated dot */}
+          {singleFlows.map((flow, idx) => {
+            const fromPoint = getConnectionPoint(flow.from, flow.fromSide, "center", flow.to);
+            const toPoint = getConnectionPoint(flow.to, flow.toSide, "center", flow.from);
+            const isRightAngle = flow.fromSide === "top" && flow.toSide === "left";
+            const path = createRightAnglePath(fromPoint, toPoint, flow.fromSide, flow.toSide, isRightAngle);
             return (
-              <path
-                key={`static-${conn.from}-${conn.to}-${idx}`}
-                d={path}
-                fill="none"
-                stroke={flowColors.inactive}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            );
-          })}
-          
-          {/* Active energy flow lines (colored based on Excel path definitions) */}
-          {(() => {
-            // If we have path definitions from Excel, use those instead of calculated flows
-            if (activePaths.length > 0 && pathDefinitions.length > 0) {
-              return activePaths.flatMap(pathId => {
-                const pathDefs = pathDefinitions.filter(pd => pd.path_id === pathId);
-                return pathDefs.map((pathDef, idx) => {
-                  // Find the connection for this path
-                  // Match based on source to get the correct line for connections with multiple lines
-                  let conn = staticConnections.find(c => {
-                    const fromMatch = c.from.toLowerCase() === pathDef.from.toLowerCase();
-                    const toMatch = c.to.toLowerCase() === pathDef.to.toLowerCase();
-                    if (!fromMatch || !toMatch) return false;
-                    
-                    const source = (pathDef.source || "").toLowerCase();
-                    
-                    // Special handling for inverter -> building: match based on source
-                    if (pathDef.from.toLowerCase() === "inverter" && pathDef.to.toLowerCase() === "building") {
-                      if (source.includes("solar")) {
-                        // solar_pwr -> left/left (40% to 40%)
-                        return c.offsetFrom === "left" && c.offsetTo === "left";
-                      } else if (source.includes("battery")) {
-                        // battery_pwr -> right/right (60% to 60%)
-                        return c.offsetFrom === "right" && c.offsetTo === "right";
-                      }
-                    }
-                    
-                    // Special handling for grid <-> gridMeter: match based on source
-                    // Lines are vertical (top of grid to bottom of gridMeter)
-                    // grid_pwr at 40% from left, solar_pwr at 60% from left
-                    if ((pathDef.from.toLowerCase() === "grid" && pathDef.to.toLowerCase() === "gridmeter") ||
-                        (pathDef.from.toLowerCase() === "gridmeter" && pathDef.to.toLowerCase() === "grid")) {
-                      if (source.includes("grid")) {
-                        // grid_pwr -> left/left (40% from left)
-                        return c.offsetFrom === "left" && c.offsetTo === "left";
-                      } else if (source.includes("solar")) {
-                        // solar_pwr -> right/right (60% from left)
-                        return c.offsetFrom === "right" && c.offsetTo === "right";
-                      }
-                    }
-                    
-                    // Special handling for inverter <-> battery: match based on source
-                    // Top line (30%): battery_pwr, Middle line (50%): grid_pwr, Bottom line (70%): solar_pwr
-                    if ((pathDef.from.toLowerCase() === "inverter" && pathDef.to.toLowerCase() === "battery") ||
-                        (pathDef.from.toLowerCase() === "battery" && pathDef.to.toLowerCase() === "inverter")) {
-                      if (source.includes("battery")) {
-                        // battery_pwr -> left/left (30% from top)
-                        return c.offsetFrom === "left" && c.offsetTo === "left";
-                      } else if (source.includes("grid")) {
-                        // grid_pwr -> center/center (50% from top)
-                        return c.offsetFrom === "center" && c.offsetTo === "center";
-                      } else if (source.includes("solar")) {
-                        // solar_pwr -> right/right (70% from top)
-                        return c.offsetFrom === "right" && c.offsetTo === "right";
-                      }
-                    }
-                    
-                    // For other connections, any matching from/to is fine
-                    return true;
-                  });
-                  
-                  if (!conn) return null;
-                  
-                  const fromPoint = getConnectionPoint(conn.from, conn.sideFrom, conn.offsetFrom, conn.to);
-                  const toPoint = getConnectionPoint(conn.to, conn.sideTo, conn.offsetTo, conn.from);
-                  const path = createRightAnglePath(fromPoint, toPoint, conn.sideFrom, conn.sideTo, conn.isRightAngle);
-                  
-                  // Parse color (could be color name, RGB, or hex)
-                  // Use lineColor from pathDef, which comes from Paths.csv lineColor column
-                  let flowColor = pathDef.color || flowColors.solar;
-                  if (flowColor.startsWith('rgb') || flowColor.startsWith('#')) {
-                    // Already RGB or hex format
-                  } else {
-                    const colorLower = flowColor.toLowerCase();
-                    if (colorLower === 'yellow' || colorLower === 'orange') {
-                      flowColor = flowColors.solar;
-                    } else if (colorLower === 'green') {
-                      flowColor = flowColors.battery;
-                    } else if (colorLower === 'red' || colorLower === 'blue') {
-                      // Blue is used for grid in some paths, but should render as red
-                      flowColor = flowColors.grid;
-                    } else {
-                      // Fallback: use source to determine color
-                      const source = (pathDef.source || "").toLowerCase();
-                      if (source.includes("solar")) {
-                        flowColor = flowColors.solar;
-                      } else if (source.includes("battery")) {
-                        flowColor = flowColors.battery;
-                      } else if (source.includes("grid")) {
-                        flowColor = flowColors.grid;
-                      }
-                    }
-                  }
-                  
-                  return (
-                    <g key={`path-${pathId}-${idx}`}>
-                      <path
-                        d={path}
-                        fill="none"
-                        stroke={flowColor}
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        opacity="1"
-                        style={{
-                          filter: `drop-shadow(0 0 2px ${flowColor})`,
-                        }}
-                      />
-                      <circle
-                        r="4"
-                        fill={flowColor}
-                        style={{
-                          filter: `drop-shadow(0 0 4px ${flowColor})`,
-                        }}
-                      >
-                        <animateMotion
-                          dur="2s"
-                          repeatCount="indefinite"
-                          path={path}
-                        />
-                      </circle>
-                    </g>
-                  );
-                }).filter(Boolean);
-              });
-            }
-            
-            // Fallback to calculated flows
-            return flows.map((flow, idx) => {
-            let fromPoint, toPoint, fromSide: Side, toSide: Side;
-            //let offsetFrom: Offset = "center";
-            //let offsetTo: Offset = "center";
-            
-            // Determine connection points based on flow direction
-            // Use 40%/60% offsets for vertical connections
-            if (flow.from === "solar" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("solar", "top", "center", "inverter");
-              toPoint = getConnectionPoint("inverter", "bottom", "center", "solar");
-              fromSide = "top";
-              toSide = "bottom";
-            } else if (flow.from === "inverter" && flow.to === "battery") {
-              fromPoint = getConnectionPoint("inverter", "right", "center", "battery");
-              toPoint = getConnectionPoint("battery", "left", "center", "inverter");
-              fromSide = "right";
-              toSide = "left";
-            } else if (flow.from === "battery" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("battery", "left", "center", "inverter");
-              toPoint = getConnectionPoint("inverter", "right", "center", "battery");
-              fromSide = "left";
-              toSide = "right";
-            } else if (flow.from === "inverter" && flow.to === "building") {
-              fromPoint = getConnectionPoint("inverter", "top", "left", "building");
-              toPoint = getConnectionPoint("building", "bottom", "right", "inverter");
-              fromSide = "top";
-              toSide = "bottom";
-            } else if (flow.from === "building" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("building", "bottom", "right", "inverter");
-              toPoint = getConnectionPoint("inverter", "top", "left", "building");
-              fromSide = "bottom";
-              toSide = "top";
-            } else if (flow.from === "inverter" && flow.to === "gridMeter") {
-              fromPoint = getConnectionPoint("inverter", "left", "right", "gridMeter");
-              toPoint = getConnectionPoint("gridMeter", "right", "right", "inverter");
-              fromSide = "left";
-              toSide = "right";
-            } else if (flow.from === "gridMeter" && flow.to === "inverter") {
-              fromPoint = getConnectionPoint("gridMeter", "right", "left", "inverter");
-              toPoint = getConnectionPoint("inverter", "left", "left", "gridMeter");
-              fromSide = "right";
-              toSide = "left";
-            } else if (flow.from === "gridMeter" && flow.to === "grid") {
-              fromPoint = getConnectionPoint("gridMeter", "left", "right", "grid");
-              toPoint = getConnectionPoint("grid", "right", "right", "gridMeter");
-              fromSide = "left";
-              toSide = "right";
-            } else if (flow.from === "grid" && flow.to === "gridMeter") {
-              fromPoint = getConnectionPoint("grid", "right", "left", "gridMeter");
-              toPoint = getConnectionPoint("gridMeter", "left", "left", "grid");
-              fromSide = "right";
-              toSide = "left";
-            } else if (flow.from === "gridMeter" && flow.to === "building") {
-              fromPoint = getConnectionPoint("gridMeter", "top", "left", "building");
-              toPoint = getConnectionPoint("building", "bottom", "right", "gridMeter");
-              fromSide = "top";
-              toSide = "bottom";
-            } else if (flow.from === "building" && flow.to === "gridMeter") {
-              fromPoint = getConnectionPoint("building", "bottom", "right", "gridMeter");
-              toPoint = getConnectionPoint("gridMeter", "top", "left", "building");
-              fromSide = "bottom";
-              toSide = "top";
-            } else {
-              return null;
-            }
-
-            const path = createRightAnglePath(fromPoint, toPoint, fromSide, toSide);
-            // Color represents the source of energy
-            const flowColor = flow.color;
-
-            return (
-              <g key={`${flow.from}-${flow.to}-${idx}`}>
+              <g key={`flow-${flow.from}-${flow.to}-${idx}`}>
                 <path
                   d={path}
                   fill="none"
-                  stroke={flowColor}
+                  stroke={flow.color}
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  opacity="1"
-                  style={{
-                    filter: `drop-shadow(0 0 2px ${flowColor})`,
-                  }}
+                  style={{ filter: `drop-shadow(0 0 2px ${flow.color})` }}
                 />
-                {/* Animated circle moving along the path */}
-                <circle
-                  r="4"
-                  fill={flowColor}
-                  style={{
-                    filter: `drop-shadow(0 0 4px ${flowColor})`,
-                  }}
-                >
-                  <animateMotion
-                    dur="2s"
-                    repeatCount="indefinite"
-                    path={path}
-                  />
+                <circle r="3" fill={flow.color} style={{ filter: `drop-shadow(0 0 4px ${flow.color})` }}>
+                  <animateMotion dur="2s" repeatCount="indefinite" path={path} />
                 </circle>
               </g>
             );
-          })})()}
+          })}
         </svg>
 
         {/* Component boxes */}
         {/* Building */}
         <div
-          className="absolute bg-slate-700/80 rounded-lg p-3 border-2 border-slate-600 flex flex-col justify-start"
+          className="absolute bg-slate-700/80 rounded-lg p-2 border-2 border-slate-600 flex flex-col justify-start"
           style={{
             left: positions.building.x - boxWidth / 2,
             top: positions.building.y - boxHeight / 2,
@@ -792,19 +439,18 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-xl">🏢</div>
-            <div className="text-xs font-semibold text-slate-300">BUILDING LOAD</div>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="text-base">🏢</div>
+            <div className="text-[10px] font-semibold text-slate-300">BUILDING</div>
           </div>
-          <div className="text-sm font-mono text-slate-300">
+          <div className="text-xs font-mono text-slate-300">
             {loadKw.toFixed(1)}{loadKw !== 0 ? " kW" : ""}
           </div>
-          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.building || "\u00A0"}</div>
         </div>
 
         {/* Grid */}
         <div
-          className="absolute bg-blue-900/40 rounded-lg p-3 border-2 border-blue-500/50 flex flex-col justify-start"
+          className="absolute bg-blue-900/40 rounded-lg p-2 border-2 border-blue-500/50 flex flex-col justify-start"
           style={{
             left: positions.grid.x - boxWidth / 2,
             top: positions.grid.y - boxHeight / 2,
@@ -812,19 +458,18 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-xl">⚡</div>
-            <div className="text-xs font-semibold text-blue-300">GRID</div>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="text-base">⚡</div>
+            <div className="text-[10px] font-semibold text-blue-300">GRID</div>
           </div>
-          <div className={`text-sm font-mono ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>
+          <div className={`text-xs font-mono ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>
             {gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)}{gridKw !== 0 ? " kW" : ""}
           </div>
-          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.grid || "\u00A0"}</div>
         </div>
 
         {/* Grid Meter */}
         <div
-          className="absolute bg-red-900/40 rounded-lg p-3 border-2 border-red-500/50 flex flex-col justify-start"
+          className="absolute bg-red-900/40 rounded-lg p-2 border-2 border-red-500/50 flex flex-col justify-start"
           style={{
             left: positions.gridMeter.x - boxWidth / 2,
             top: positions.gridMeter.y - boxHeight / 2,
@@ -832,19 +477,18 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-xl">📊</div>
-            <div className="text-xs font-semibold text-red-300">GRID METER</div>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="text-base">📊</div>
+            <div className="text-[10px] font-semibold text-red-300">GRID METER</div>
           </div>
-          <div className="text-sm font-mono text-red-300">
+          <div className="text-xs font-mono text-red-300">
             {Math.abs(gridKw).toFixed(1)}{Math.abs(gridKw) !== 0 ? " kW" : ""}
           </div>
-          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.gridMeter || "\u00A0"}</div>
         </div>
 
         {/* Inverter */}
         <div
-          className="absolute bg-slate-700/80 rounded-lg p-3 border-2 border-slate-500 flex flex-col justify-start"
+          className="absolute bg-slate-700/80 rounded-lg p-2 border-2 border-slate-500 flex flex-col justify-start"
           style={{
             left: positions.inverter.x - boxWidth / 2,
             top: positions.inverter.y - boxHeight / 2,
@@ -852,17 +496,16 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-xl">🔄</div>
-            <div className="text-xs font-semibold text-slate-300">INVERTER</div>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="text-base">🔄</div>
+            <div className="text-[10px] font-semibold text-slate-300">INVERTER</div>
           </div>
-          <div className="text-sm font-mono text-slate-300">—</div>
-          <div className="text-xs text-slate-400 min-h-[1rem]">DC ↔ AC</div>
+          <div className="text-xs font-mono text-slate-300">DC↔AC</div>
         </div>
 
         {/* Solar */}
         <div
-          className="absolute bg-amber-900/40 rounded-lg p-3 border-2 border-amber-500/50 flex flex-col justify-start"
+          className="absolute bg-amber-900/40 rounded-lg p-2 border-2 border-amber-500/50 flex flex-col justify-start"
           style={{
             left: positions.solar.x - boxWidth / 2,
             top: positions.solar.y - boxHeight / 2,
@@ -870,19 +513,18 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-xl">☀️</div>
-            <div className="text-xs font-semibold text-amber-300">SOLAR</div>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="text-base">☀️</div>
+            <div className="text-[10px] font-semibold text-amber-300">SOLAR</div>
           </div>
-          <div className="text-sm font-mono text-amber-300">
+          <div className="text-xs font-mono text-amber-300">
             {solarKw.toFixed(1)}{solarKw !== 0 ? " kW" : ""}
           </div>
-          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.solar || "\u00A0"}</div>
         </div>
 
         {/* Battery */}
         <div
-          className="absolute bg-emerald-900/40 rounded-lg p-3 border-2 border-emerald-500/50 flex flex-col justify-start"
+          className="absolute bg-emerald-900/40 rounded-lg p-2 border-2 border-emerald-500/50 flex flex-col justify-start"
           style={{
             left: positions.battery.x - boxWidth / 2,
             top: positions.battery.y - boxHeight / 2,
@@ -890,20 +532,19 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxHeight,
           }}
         >
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-xl">🔋</div>
-            <div className="text-xs font-semibold text-emerald-300">BATTERY</div>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="text-base">🔋</div>
+            <div className="text-[10px] font-semibold text-emerald-300">BATTERY</div>
           </div>
-          <div className="text-sm font-mono text-emerald-300">
+          <div className="text-xs font-mono text-emerald-300">
             {batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)}{batteryKw !== 0 ? " kW" : ""}
           </div>
-          <div className="text-xs text-slate-400 min-h-[1rem]">{labels?.battery || "\u00A0"}</div>
-          <div className="text-xs text-slate-400">{soc.toFixed(0)}% SOC</div>
+          <div className="text-[10px] text-slate-400">{soc.toFixed(0)}% SOC</div>
         </div>
 
         {/* Daily Consumption */}
         <div
-          className="absolute bg-slate-700/80 rounded-lg p-3 border-2 border-slate-600 flex flex-col justify-start"
+          className="absolute bg-slate-700/80 rounded-lg p-2 border-2 border-slate-600 flex flex-col justify-start"
           style={{
             left: positions.dailyConsumption.x - boxWidth / 2,
             top: positions.dailyConsumption.y - boxHeight / 2,
@@ -911,19 +552,18 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxInfoHeight,
           }}
         >
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-xl">📈</div>
-            <div className="text-xs font-semibold text-slate-300">Daily Consumption</div>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="text-base">📈</div>
+            <div className="text-[10px] font-semibold text-slate-300">Daily Consumption</div>
           </div>
-          <div className="text-sm font-mono text-slate-300">
+          <div className="text-xs font-mono text-slate-300">
             {dailyConsumptionSum.toFixed(2)} kWh
           </div>
-          <div className="text-xs text-slate-400 min-h-[1rem]">{"\u00A0"}</div>
         </div>
 
         {/* Daily Solar Production */}
         <div
-          className="absolute bg-amber-900/40 rounded-lg p-3 border-2 border-amber-500/50 flex flex-col justify-start"
+          className="absolute bg-amber-900/40 rounded-lg p-2 border-2 border-amber-500/50 flex flex-col justify-start"
           style={{
             left: positions.dailySolar.x - boxWidth / 2,
             top: positions.dailySolar.y - boxHeight / 2,
@@ -931,19 +571,18 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxInfoHeight,
           }}
         >
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-xl">☀️</div>
-            <div className="text-xs font-semibold text-amber-300">Daily Solar</div>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="text-base">☀️</div>
+            <div className="text-[10px] font-semibold text-amber-300">Daily Solar</div>
           </div>
-          <div className="text-sm font-mono text-amber-300">
+          <div className="text-xs font-mono text-amber-300">
             {dailySolarSum.toFixed(2)} kWh
           </div>
-          <div className="text-xs text-slate-400 min-h-[1rem]">{"\u00A0"}</div>
         </div>
 
         {/* Market Prices */}
         <div
-          className="absolute bg-slate-700/80 rounded-lg p-3 border-2 border-slate-600 flex flex-col justify-start"
+          className="absolute bg-slate-700/80 rounded-lg p-2 border-2 border-slate-600 flex flex-col justify-start"
           style={{
             left: positions.marketPrices.x - boxWidth / 2,
             top: positions.marketPrices.y - boxHeight / 2,
@@ -951,16 +590,17 @@ export function EnergyFlowDiagram({ snapshot, overview, activePaths = [], pathDe
             height: boxInfoHeight,
           }}
         >
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-xl">💰</div>
-            <div className="text-xs font-semibold text-slate-300">Market Prices</div>
+          <div className="flex items-center gap-1 mb-0.5">
+            <div className="text-base">💰</div>
+            <div className="text-[10px] font-semibold text-slate-300">Market Prices</div>
           </div>
-          <div className={`text-sm font-mono ${getTariffColor(tariff || "", false)}`}>
+          <div className={`text-xs font-mono ${getTariffColor(tariff || "", false)}`}>
             Buy: {buyPrice !== undefined ? buyPrice.toFixed(0) : "—"} €/MWh
           </div>
-          <div className={`text-sm font-mono ${getTariffColor(tariff || "", true)}`}>
+          <div className={`text-xs font-mono ${getTariffColor(tariff || "", true)}`}>
             Export: {exportPrice !== undefined ? exportPrice.toFixed(0) : "—"} €/MWh
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -98,25 +98,26 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Chart 1: Cumulative Energy Consumption */}
-      <div className="bg-slate-800/60 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-slate-300 mb-4">
+      <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 min-w-0 overflow-hidden">
+        <h3 className="text-base sm:text-lg font-semibold text-slate-300 mb-3 sm:mb-4">
           Cumulative Energy Consumption (24h)
         </h3>
-        <ResponsiveContainer width="100%" height={270}>
-          <LineChart data={chartData.length > 0 ? chartData : data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <div className="w-full h-[220px] sm:h-[270px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData.length > 0 ? chartData : data} margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
             <XAxis
               dataKey="time"
               stroke="#94a3b8"
-              tick={{ fill: "#94a3b8" }}
+              tick={{ fill: "#94a3b8", fontSize: 10 }}
               tickFormatter={formatTime}
               domain={['dataMin', 'dataMax']}
             />
             <YAxis
               stroke="#94a3b8"
-              tick={{ fill: "#94a3b8" }}
+              tick={{ fill: "#94a3b8", fontSize: 10 }}
               label={{ value: "Energy (kWh)", angle: -90, position: "insideLeft", fill: "#94a3b8" }}
             />
             <Tooltip content={<CustomTooltip />} />
@@ -170,26 +171,28 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             />
           </LineChart>
         </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Chart 2: Price Evolution */}
-      <div className="bg-slate-800/60 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-slate-300 mb-4">
+      <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 min-w-0 overflow-hidden">
+        <h3 className="text-base sm:text-lg font-semibold text-slate-300 mb-3 sm:mb-4">
           Daily Price Evolution (24h)
         </h3>
-        <ResponsiveContainer width="100%" height={270}>
-          <LineChart data={chartData.length > 0 ? chartData : data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <div className="w-full h-[220px] sm:h-[270px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData.length > 0 ? chartData : data} margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
             <XAxis
               dataKey="time"
               stroke="#94a3b8"
-              tick={{ fill: "#94a3b8" }}
+              tick={{ fill: "#94a3b8", fontSize: 10 }}
               tickFormatter={formatTime}
               domain={['dataMin', 'dataMax']}
             />
             <YAxis
               stroke="#94a3b8"
-              tick={{ fill: "#94a3b8" }}
+              tick={{ fill: "#94a3b8", fontSize: 10 }}
               label={{ value: "Price (€/MWh)", angle: -90, position: "insideLeft", fill: "#94a3b8" }}
             />
             <Tooltip content={<CustomTooltip />} />
@@ -232,6 +235,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             />
           </LineChart>
         </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

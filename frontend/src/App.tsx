@@ -138,62 +138,62 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">⚡ Energy Monitor Demo</h1>
-          <div className="flex items-center gap-2 text-sm">
+      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-10">
+        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h1 className="text-lg sm:text-xl font-semibold truncate">⚡ Energy Monitor Demo</h1>
+          <div className="flex items-center gap-2 text-sm shrink-0">
             <span
-              className={`w-2.5 h-2.5 rounded-full ${
+              className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                 wsStatus === "open" ? "bg-emerald-400" : "bg-red-500"
               }`}
             />
             <span>{wsStatus === "open" ? "Live" : "Offline"}</span>
           </div>
         </div>
-        <nav className="max-w-5xl mx-auto px-4 pb-2 flex gap-4 text-sm">
+        <nav className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 flex gap-2 sm:gap-4 text-sm overflow-x-auto -mb-px">
           {["overview", "equipment", "analytics"].map((id) => (
             <button
               key={id}
               onClick={() => setTab(id as any)}
-              className={`pb-1 border-b-2 ${
-                tab === id ? "border-emerald-400 text-emerald-300" : "border-transparent text-slate-400"
+              className={`pb-1 border-b-2 shrink-0 whitespace-nowrap ${
+                tab === id ? "border-emerald-400 text-emerald-300" : "border-transparent text-slate-400 hover:text-slate-300"
               }`}
             >
-              {id === "overview" ? "Overview" : id === "equipment" ? "Equipment" : "Analytics"}
+              {id === "overview" ? "Dashboard" : id === "equipment" ? "Equipment" : "Analytics"}
             </button>
           ))}
         </nav>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 min-w-0">
         {loading && <div className="text-slate-400">Loading...</div>}
 
         {!loading && tab === "overview" && (
           <div className="space-y-6">
             {/* Stats row */}
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="bg-slate-800/60 rounded-lg p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+              <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Equipment</div>
-                <div className="mt-2 text-3xl font-semibold">
+                <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold">
                   {overview?.online_equipment ?? 0}/{overview?.total_equipment ?? 0}
                 </div>
                 <div className="text-sm text-slate-400 mt-1">Online</div>
               </div>
-              <div className="bg-slate-800/60 rounded-lg p-4">
+              <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Uptime</div>
-                <div className="mt-2 text-3xl font-semibold">
+                <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold">
                   {overview ? formatHours(overview.uptime_seconds) : "0h"}
                 </div>
               </div>
-              <div className="bg-slate-800/60 rounded-lg p-4">
+              <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Solar</div>
-                <div className="mt-2 text-3xl font-semibold text-amber-300">
+                <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold text-amber-300">
                   {solarKw.toFixed(1)} <span className="text-sm">kW</span>
                 </div>
               </div>
-              <div className="bg-slate-800/60 rounded-lg p-4">
+              <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Battery</div>
-                <div className="mt-2 text-3xl font-semibold text-emerald-300">
+                <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold text-emerald-300">
                   {soc.toFixed(0)} <span className="text-sm">%</span>
                 </div>
               </div>
@@ -224,9 +224,9 @@ export function App() {
         )}
 
         {!loading && tab === "equipment" && (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
             {equipment.map((eq) => (
-              <div key={eq.equipment_id} className="bg-slate-800/60 rounded-lg p-4">
+              <div key={eq.equipment_id} className="bg-slate-800/60 rounded-lg p-3 sm:p-4 min-w-0">
                 <div className="flex justify-between items-center mb-2">
                   <div>
                     <div className="font-semibold">{eq.name}</div>
