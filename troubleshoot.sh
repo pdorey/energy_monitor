@@ -25,7 +25,15 @@ echo "   frontend_dist exists: $([ -d "$SCRIPT_DIR/frontend_dist" ] && echo YES 
 echo "   data dir exists: $([ -d "$SCRIPT_DIR/data" ] && echo YES || echo NO)"
 echo ""
 
-echo "4. To test manual start (from project root):"
+echo "4. Quick import check (catches import errors):"
+if [ -f "$SCRIPT_DIR/venv/bin/python" ]; then
+    (cd "$SCRIPT_DIR" && PYTHONPATH="$SCRIPT_DIR/backend" ENERGY_MONITOR_DB_PATH="$SCRIPT_DIR/data" ./venv/bin/python check_imports.py 2>&1)
+else
+    echo "   venv not found, skip"
+fi
+echo ""
+
+echo "5. To test manual start (from project root):"
 echo "   cd $SCRIPT_DIR"
 echo "   source venv/bin/activate"
 echo "   PYTHONPATH=$SCRIPT_DIR/backend uvicorn app.main:app --host 0.0.0.0 --port 8000"

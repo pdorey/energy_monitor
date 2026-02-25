@@ -88,9 +88,13 @@ if [ ! -d "frontend_dist" ] || [ ! -f "frontend_dist/index.html" ]; then
     exit 1
 fi
 
-# Step 7: Ensure data directory
+# Step 7: Ensure data directory and permissions
 print_status "Step 7: Ensuring data directory exists..."
 mkdir -p data
+# If using systemd with User=pi, ensure pi can write to data/
+if id pi &>/dev/null && [ -d "data" ]; then
+    sudo chown -R pi:pi data 2>/dev/null || true
+fi
 
 # Step 8: Install/update Python dependencies
 print_status "Step 8: Installing Python dependencies..."
@@ -110,6 +114,10 @@ if sudo cp /tmp/energy-monitor.service /etc/systemd/system/energy-monitor.servic
 else
     print_warning "Could not install systemd service (need sudo). You can start manually: source venv/bin/activate && cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 fi
+
+# Step 9b: Ensure run.sh executable
+chmod +x run.sh 2>/dev/null || true
+chmod +x troubleshoot.sh 2>/dev/null || true
 
 # Step 10: Restart service
 print_status "Step 10: Restarting energy-monitor service..."
