@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .models import Overview, EquipmentItem, AnalyticsResponse, Snapshot
 from .simulator import Simulator
-from .config import use_simulator, get_retention_days, get_mode, get_mode
+from .config import use_simulator, get_retention_days, get_mode
 from .db import get_repository
 from .routers import weather, prices, phases, erse_tariffs, usage_profiles
 

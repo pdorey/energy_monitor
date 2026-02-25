@@ -1,0 +1,17 @@
+[Unit]
+Description=Energy Monitor - FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=REPLACE_INSTALL_DIR
+Environment="PYTHONPATH=REPLACE_INSTALL_DIR/backend"
+Environment="ENERGY_MONITOR_DB_PATH=REPLACE_INSTALL_DIR/data"
+ExecStart=REPLACE_INSTALL_DIR/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=unless-stopped
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
