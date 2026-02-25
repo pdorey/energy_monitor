@@ -174,11 +174,18 @@ sudo systemctl stop energy-monitor
 
 Ensure Node.js is installed: `node --version` (v18+ recommended)
 
-### Service won't start
+### Service won't start (exit-code)
 
-1. Run install: `./install.sh`
-2. Check venv exists: `ls venv/bin/uvicorn`
-3. Test manually: `source venv/bin/activate && cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000`
+1. **Get the actual error:** `./troubleshoot.sh` or `sudo journalctl -u energy-monitor -n 50 --no-pager`
+2. Run install: `./install.sh`
+3. Check venv exists: `ls venv/bin/uvicorn`
+4. Test manually from project root:
+   ```bash
+   cd /path/to/energy_monitor
+   source venv/bin/activate
+   PYTHONPATH=$PWD/backend uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
+5. If `User=pi` fails: edit `/etc/systemd/system/energy-monitor.service` and change `User=` to your username, then `sudo systemctl daemon-reload && sudo systemctl restart energy-monitor`
 
 ## License
 

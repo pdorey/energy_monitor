@@ -140,7 +140,9 @@ if [ $HEALTH_OK -eq 1 ]; then
     [ -n "$IP" ] && print_success "Dashboard: http://$IP:8000"
     print_success "Dashboard: http://localhost:8000"
 else
-    print_warning "Health check failed. Check: sudo journalctl -u energy-monitor -f"
+    print_warning "Health check failed."
+    print_warning "Run: ./troubleshoot.sh   to see the actual error"
+    print_warning "Or:  sudo journalctl -u energy-monitor -n 50 --no-pager"
 fi
 
 echo ""
