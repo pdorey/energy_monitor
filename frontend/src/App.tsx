@@ -255,7 +255,7 @@ export function App() {
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Battery</div>
                 <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold text-emerald-300">
-                  {soc.toFixed(0)} <span className="text-sm">%</span>
+                  {soc.toFixed(0)} <span className="text-sm">% SOC</span>
                 </div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">

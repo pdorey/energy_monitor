@@ -64,7 +64,6 @@ export function EnergyFlowDiagram({
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
   const gridKw = snapshot?.grid.power_w ? snapshot.grid.power_w / 1000 : overview?.grid_kw ?? 0;
   const loadKw = snapshot?.load.power_w ? snapshot.load.power_w / 1000 : overview?.load_kw ?? 0;
-  const soc = snapshot?.battery.soc_percent ?? overview?.battery_soc_percent ?? 0;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ w: 520, h: 380 });
@@ -124,23 +123,17 @@ export function EnergyFlowDiagram({
     });
   }, [validConnections]);
 
-  // Active path definitions: which connections are active and their color
-  const activeMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const pd of pathDefinitions) {
-      const from = normalizeNode(pd.from);
-      const to = normalizeNode(pd.to);
-      const key = [from, to].sort().join("|");
-      const color = (pd.color || "").toLowerCase();
-      const rgb =
-        color === "yellow" || color === "orange" ? flowColors.solar
-        : color === "green" ? flowColors.battery
-        : color === "red" ? flowColors.grid
-        : flowColors[pd.source?.includes("solar") ? "solar" : pd.source?.includes("battery") ? "battery" : "grid"];
-      if (!map.has(key)) map.set(key, rgb);
-    }
-    return map;
-  }, [pathDefinitions]);
+  // Resolve path definition color to RGB
+  const resolveColor = (pd: { color?: string; source?: string }) => {
+    const color = (pd.color || "").toLowerCase();
+    if (color === "yellow" || color === "orange") return flowColors.solar;
+    if (color === "green") return flowColors.battery;
+    if (color === "red") return flowColors.grid;
+    const src = (pd.source || "").toLowerCase();
+    if (src.includes("solar")) return flowColors.solar;
+    if (src.includes("battery")) return flowColors.battery;
+    return flowColors.grid;
+  };
 
   // L-path: center A -> right angle (aligned with B) -> center B
   const makePath = (from: { x: number; y: number }, to: { x: number; y: number }): string => {
@@ -218,16 +211,14 @@ export function EnergyFlowDiagram({
               />
             );
           })}
-          {/* Active colored overlay */}
-          {connections.map((conn, i) => {
-            const from = getCenter(normalizeNode(conn.from));
-            const to = getCenter(normalizeNode(conn.to));
-            const key = [normalizeNode(conn.from), normalizeNode(conn.to)].sort().join("|");
-            const color = activeMap.get(key);
-            if (!color) return null;
+          {/* Active paths: from pathDefinitions (PATH in Consumption.csv -> Paths.csv lookup) */}
+          {pathDefinitions.map((pd, i) => {
+            const from = getCenter(normalizeNode(pd.from));
+            const to = getCenter(normalizeNode(pd.to));
+            const color = resolveColor(pd);
             const path = makePath(from, to);
             return (
-              <g key={`active-${i}`}>
+              <g key={`active-${pd.path_id}-${pd.from}-${pd.to}-${pd.source}-${i}`}>
                 <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 2px ${color})` }} />
                 <circle r="3" fill={color} style={{ filter: `drop-shadow(0 0 4px ${color})` }}>
                   <animateMotion dur="2s" repeatCount="indefinite" path={path} />
@@ -296,7 +287,6 @@ export function EnergyFlowDiagram({
                 <span className="text-xs font-semibold text-emerald-300 truncate">BATTERY</span>
               </div>
               <div className="text-sm font-mono text-emerald-300 truncate">{batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)}{batteryKw !== 0 ? " kW" : ""}</div>
-              <div className="text-xs text-slate-400 truncate">{soc.toFixed(0)}% SOC</div>
             </div>
           </div>
         </div>

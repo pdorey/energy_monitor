@@ -357,10 +357,10 @@ async def get_consumption_data():
                 reader = csv.DictReader(f)
 
                 def map_node(name: str) -> str:
-                    n = name.strip().upper()
+                    n = name.strip().upper().replace(" ", "")
                     if n == "GRID":
                         return "grid"
-                    if n == "GRID METER":
+                    if n == "GRIDMETER":
                         return "gridMeter"
                     if n == "INVERTER":
                         return "inverter"
