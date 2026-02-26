@@ -422,13 +422,15 @@ async def get_consumption_data():
                         }
                     )
 
-                # Build valid_connections: unique from/to pairs (for grey base lines)
+                # Build valid_connections: unique from/to pairs (no solar-gridMeter - not a valid path)
                 valid_connections = []
                 seen = set()
                 for prow in raw_rows:
                     from_n = map_node((prow.get("from") or "").strip())
                     to_n = map_node((prow.get("to") or "").strip())
                     if not from_n or not to_n:
+                        continue
+                    if (from_n == "solar" and to_n == "gridmeter") or (from_n == "gridmeter" and to_n == "solar"):
                         continue
                     key = tuple(sorted([from_n, to_n]))
                     if key not in seen:

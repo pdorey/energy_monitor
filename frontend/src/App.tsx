@@ -283,22 +283,34 @@ export function App() {
               </div>
             </div>
 
-            {/* Energy Flow Diagram */}
-            <EnergyFlowDiagram
-              snapshot={snapshot}
-              overview={overview ? {
-                solar_kw: overview.solar_kw,
-                battery_kw: overview.battery_kw,
-                grid_kw: overview.grid_kw,
-                load_kw: overview.load_kw,
-                battery_soc_percent: overview.battery_soc_percent,
-                timestamp: overview.timestamp,
-              } : null}
-              activePaths={consumptionData?.active_paths}
-              pathDefinitions={consumptionData?.path_definitions}
-              validConnections={consumptionData?.valid_connections}
-              displayTime={consumptionData?.time}
-            />
+            {/* Energy Flow (left 50%) + Placeholder cards (right 50%) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:grid-rows-1" style={{ minHeight: "400px" }}>
+              <div className="min-h-[320px] lg:min-h-0 flex">
+                <EnergyFlowDiagram
+                  snapshot={snapshot}
+                  overview={overview ? {
+                    solar_kw: overview.solar_kw,
+                    battery_kw: overview.battery_kw,
+                    grid_kw: overview.grid_kw,
+                    load_kw: overview.load_kw,
+                    battery_soc_percent: overview.battery_soc_percent,
+                    timestamp: overview.timestamp,
+                  } : null}
+                  activePaths={consumptionData?.active_paths}
+                  pathDefinitions={consumptionData?.path_definitions}
+                  validConnections={consumptionData?.valid_connections}
+                  displayTime={consumptionData?.time}
+                />
+              </div>
+              <div className="flex flex-col gap-4 min-h-[320px] lg:min-h-0">
+                <div className="flex-1 min-h-[150px] bg-slate-800/60 rounded-lg border-2 border-dashed border-slate-600 flex items-center justify-center">
+                  <span className="text-slate-500 text-sm">Chart placeholder 1</span>
+                </div>
+                <div className="flex-1 min-h-[150px] bg-slate-800/60 rounded-lg border-2 border-dashed border-slate-600 flex items-center justify-center">
+                  <span className="text-slate-500 text-sm">Chart placeholder 2</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

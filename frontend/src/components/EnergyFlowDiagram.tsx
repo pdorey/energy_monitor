@@ -34,7 +34,7 @@ const flowColors: Record<string, string> = {
   inactive: "rgba(148, 163, 184, 0.35)",
 };
 
-// Fallback valid connections when API doesn't provide (from Paths.csv structure)
+// Fallback valid connections (no solar-gridMeter - not a valid path)
 const DEFAULT_VALID_CONNECTIONS: Array<{ from: string; to: string }> = [
   { from: "grid", to: "gridMeter" },
   { from: "gridMeter", to: "building" },
@@ -105,17 +105,24 @@ export function EnergyFlowDiagram({
 
     return {
       building: cell(1, 0),
-      grid: cell(0, 1),
+      gridMeter: cell(0, 1),
       inverter: cell(1, 1),
       battery: cell(2, 1),
-      gridMeter: cell(0, 2),
+      grid: cell(0, 2),
       solar: cell(1, 2),
       boxW,
       boxH,
     };
   }, [dimensions]);
 
-  const connections = validConnections?.length ? validConnections : DEFAULT_VALID_CONNECTIONS;
+  const connections = useMemo(() => {
+    const list = validConnections?.length ? validConnections : DEFAULT_VALID_CONNECTIONS;
+    return list.filter((c) => {
+      const a = normalizeNode(c.from);
+      const b = normalizeNode(c.to);
+      return !((a === "solar" && b === "gridmeter") || (a === "gridmeter" && b === "solar"));
+    });
+  }, [validConnections]);
 
   // Active path definitions: which connections are active and their color
   const activeMap = useMemo(() => {
@@ -192,7 +199,7 @@ export function EnergyFlowDiagram({
         <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">Energy Flow</div>
         {currentTime && <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">{currentTime}</div>}
       </div>
-      <div ref={containerRef} className="relative w-full max-w-[520px] min-w-0 mx-auto overflow-hidden" style={{ aspectRatio: "520/380", minHeight: "320px" }}>
+      <div ref={containerRef} className="relative w-full min-w-0 h-full min-h-[320px] overflow-hidden" style={{ aspectRatio: "4/3" }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${dimensions.h}`} preserveAspectRatio="xMidYMid meet" className="block" style={{ zIndex: 0 }}>
           {/* Grey base lines for all valid connections */}
           {connections.map((conn, i) => {
@@ -243,7 +250,7 @@ export function EnergyFlowDiagram({
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.grid.x, layout.grid.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-blue-900/40 rounded-lg p-2 border-2 border-blue-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+            <div className="h-full bg-blue-900 rounded-lg p-2 border-2 border-blue-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">⚡</span>
                 <span className="text-xs font-semibold text-blue-300 truncate">GRID</span>
@@ -253,10 +260,10 @@ export function EnergyFlowDiagram({
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.gridMeter.x, layout.gridMeter.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-red-900/40 rounded-lg p-2 border-2 border-red-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+            <div className="h-full bg-red-900 rounded-lg p-2 border-2 border-red-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">📊</span>
-                <span className="text-xs font-semibold text-red-300 truncate">GRID METER</span>
+                <span className="text-xs font-semibold text-red-300 truncate">GATEWAY</span>
               </div>
               <div className="text-sm font-mono text-red-300 truncate">{Math.abs(gridKw).toFixed(1)}{Math.abs(gridKw) !== 0 ? " kW" : ""}</div>
             </div>
@@ -273,7 +280,7 @@ export function EnergyFlowDiagram({
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.solar.x, layout.solar.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-amber-900/40 rounded-lg p-2 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+            <div className="h-full bg-amber-900 rounded-lg p-2 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">☀️</span>
                 <span className="text-xs font-semibold text-amber-300 truncate">SOLAR</span>
@@ -283,7 +290,7 @@ export function EnergyFlowDiagram({
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.battery.x, layout.battery.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-emerald-900/40 rounded-lg p-2 border-2 border-emerald-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+            <div className="h-full bg-emerald-900 rounded-lg p-2 border-2 border-emerald-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">🔋</span>
                 <span className="text-xs font-semibold text-emerald-300 truncate">BATTERY</span>
