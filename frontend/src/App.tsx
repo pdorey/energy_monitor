@@ -60,6 +60,7 @@ interface ConsumptionData {
     source?: string;
     description: string;
   }>;
+  valid_connections?: Array<{ from: string; to: string }>;
   labels: {
     building?: string;
     grid?: string;
@@ -242,6 +243,7 @@ export function App() {
               } : null}
               activePaths={consumptionData?.active_paths}
               pathDefinitions={consumptionData?.path_definitions}
+              validConnections={consumptionData?.valid_connections}
               labels={consumptionData?.labels}
               displayTime={consumptionData?.time}
               buildingConsumption={consumptionData?.building_consumption}

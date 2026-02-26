@@ -351,6 +351,7 @@ async def get_consumption_data():
 
         # Load path definitions from Paths.csv
         path_definitions: list[dict] = []
+        valid_connections: list[dict] = []
         if os.path.exists(PATHS_CSV):
             with open(PATHS_CSV, newline="", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
@@ -379,12 +380,13 @@ async def get_consumption_data():
                     clean = {(k or "").strip().lstrip("\ufeff"): (v or "") for k, v in prow.items()}
                     raw_rows.append(clean)
 
-                # Build segment-level definitions: only keep segments where status == active.
+                # Build segment-level definitions: only keep segments for current path where status == active.
                 # Color and source now come directly from CSV columns "source" and "lineColor".
+                active_path_set = {p.strip() for p in active_paths}
                 for prow in raw_rows:
                     pid = (prow.get("PATH") or "").strip()
                     status = (prow.get("status") or "").strip().lower()
-                    if not pid or status != "active":
+                    if not pid or status != "active" or pid not in active_path_set:
                         continue
 
                     from_raw = (prow.get("from") or "").strip()
@@ -420,6 +422,19 @@ async def get_consumption_data():
                         }
                     )
 
+                # Build valid_connections: unique from/to pairs (for grey base lines)
+                valid_connections = []
+                seen = set()
+                for prow in raw_rows:
+                    from_n = map_node((prow.get("from") or "").strip())
+                    to_n = map_node((prow.get("to") or "").strip())
+                    if not from_n or not to_n:
+                        continue
+                    key = tuple(sorted([from_n, to_n]))
+                    if key not in seen:
+                        seen.add(key)
+                        valid_connections.append({"from": from_n, "to": to_n})
+
         return {
             "time": time_value,
             "building_kw": building_kw,
@@ -428,6 +443,7 @@ async def get_consumption_data():
             "solar_kw": solar_kw,
             "active_paths": active_paths,
             "path_definitions": path_definitions,
+            "valid_connections": valid_connections,
             "labels": labels,
             "building_consumption": building_consumption,
             "solar_production": solar_production,

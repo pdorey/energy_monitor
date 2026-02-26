@@ -11,9 +11,7 @@ interface EnergyFlowDiagramProps {
     battery_soc_percent: number;
     timestamp?: string;
   } | null;
-  // Path data from Excel: which paths are active (PATH 1, PATH 2, PATH 3)
-  activePaths?: string[]; // e.g., ["PATH 1", "PATH 2"]
-  // Path definitions from Excel table N3:R9
+  activePaths?: string[];
   pathDefinitions?: Array<{
     path_id: string;
     from: string;
@@ -22,18 +20,9 @@ interface EnergyFlowDiagramProps {
     source?: string;
     description: string;
   }>;
-  // Labels for boxes from Excel
-  labels?: {
-    building?: string;
-    grid?: string;
-    gridMeter?: string;
-    inverter?: string;
-    solar?: string;
-    battery?: string;
-  };
-  // Time to display (from Excel table)
+  validConnections?: Array<{ from: string; to: string }>;
+  labels?: Record<string, string | undefined>;
   displayTime?: string;
-  // Additional data for new boxes
   buildingConsumption?: number;
   solarProduction?: number;
   buyPrice?: number;
@@ -41,386 +30,241 @@ interface EnergyFlowDiagramProps {
   tariff?: string;
 }
 
-// Flow colors based on energy source
-const flowColors = {
-  solar: "rgb(251, 191, 36)", // Yellow/Orange - solar energy
-  battery: "rgb(34, 197, 94)", // Green - battery energy
-  grid: "rgb(239, 68, 68)", // Red - grid energy
-  inactive: "rgba(148, 163, 184, 0.3)", // Gray - inactive
+const flowColors: Record<string, string> = {
+  solar: "rgb(251, 191, 36)",
+  battery: "rgb(34, 197, 94)",
+  grid: "rgb(239, 68, 68)",
+  yellow: "rgb(251, 191, 36)",
+  green: "rgb(34, 197, 94)",
+  red: "rgb(239, 68, 68)",
+  inactive: "rgba(148, 163, 184, 0.35)",
 };
 
+// Fallback valid connections when API doesn't provide (from Paths.csv structure)
+const DEFAULT_VALID_CONNECTIONS: Array<{ from: string; to: string }> = [
+  { from: "grid", to: "gridMeter" },
+  { from: "gridMeter", to: "building" },
+  { from: "gridMeter", to: "inverter" },
+  { from: "inverter", to: "battery" },
+  { from: "inverter", to: "building" },
+  { from: "solar", to: "inverter" },
+  { from: "inverter", to: "gridMeter" },
+];
 
-export function EnergyFlowDiagram({ snapshot, overview, displayTime, buildingConsumption, solarProduction, buyPrice, exportPrice, tariff }: EnergyFlowDiagramProps) {
-  // Calculate power values in kW
+function normalizeNode(name: string): string {
+  const n = name.toLowerCase().replace(/\s+/g, "");
+  if (n === "gridmeter") return "gridMeter";
+  return n;
+}
+
+export function EnergyFlowDiagram({
+  snapshot,
+  overview,
+  activePaths = [],
+  pathDefinitions = [],
+  validConnections,
+  displayTime,
+  buildingConsumption,
+  solarProduction,
+  buyPrice,
+  exportPrice,
+  tariff,
+}: EnergyFlowDiagramProps) {
+  void activePaths;
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
   const gridKw = snapshot?.grid.power_w ? snapshot.grid.power_w / 1000 : overview?.grid_kw ?? 0;
   const loadKw = snapshot?.load.power_w ? snapshot.load.power_w / 1000 : overview?.load_kw ?? 0;
   const soc = snapshot?.battery.soc_percent ?? overview?.battery_soc_percent ?? 0;
 
-  // Compact box dimensions
-  const boxWidth = 88;
-  const boxHeight = 56;
-  const boxInfoWidth = 120;
-  const boxInfoHeight = 64;
-
-  // Layout: Compact diagram
-  const gridMeterX = 70;
-  const inverterX = 200;
-  const batteryX = 330;
-  const rightBoxesX = 520;
-
-  const positions = {
-    building: { x: inverterX, y: 36 },
-    grid: { x: gridMeterX, y: 220 },
-    gridMeter: { x: gridMeterX, y: 128 },
-    inverter: { x: inverterX, y: 128 },
-    solar: { x: inverterX, y: 220 },
-    battery: { x: batteryX, y: 128 },
-    dailyConsumption: { x: rightBoxesX, y: 64 },
-    dailySolar: { x: rightBoxesX, y: 140 },
-    marketPrices: { x: rightBoxesX, y: 216 },
-  };
-
-  // One connector per box: dominant flow only. Color = source (yellow=solar, green=battery, red=grid)
-  type Side = "top" | "bottom" | "left" | "right";
-  type SingleFlow = { from: string; to: string; powerKw: number; color: string; fromSide: Side; toSide: Side };
-
-  // Responsive scaling: diagram scales down on narrow viewports
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const diagramWidth = 680;
-  const diagramHeight = 320;
+  const [dimensions, setDimensions] = useState({ w: 680, h: 320 });
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const updateScale = () => {
-      const w = el.offsetWidth;
-      setScale(Math.min(1, w / diagramWidth));
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setDimensions({ w: Math.max(200, rect.width), h: Math.max(150, rect.height) });
     };
-    updateScale();
-    const ro = new ResizeObserver(updateScale);
+    update();
+    const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  const singleFlows = useMemo<SingleFlow[]>(() => {
-    const threshold = 0.1;
-    const result: SingleFlow[] = [];
+  // Responsive layout: positions as 0..1 normalized, then scaled to dimensions
+  const layout = useMemo(() => {
+    const W = dimensions.w;
+    const H = dimensions.h;
+    const cx = 0.5;
+    const left = 0.18;
+    const right = 0.82;
+    const top = 0.12;
+    const mid = 0.42;
+    const bot = 0.72;
 
-    // Solar -> Inverter (yellow)
-    if (solarKw > threshold) {
-      result.push({
-        from: "solar", to: "inverter", powerKw: solarKw, color: flowColors.solar,
-        fromSide: "top", toSide: "bottom",
-      });
+    return {
+      building: { x: cx * W, y: top * H },
+      inverter: { x: cx * W, y: mid * H },
+      solar: { x: cx * W, y: bot * H },
+      grid: { x: left * W, y: (top + mid) / 2 * H },
+      gridMeter: { x: left * W, y: mid * H },
+      battery: { x: right * W, y: mid * H },
+      dailyConsumption: { x: (right + 1) / 2 * W, y: (top + mid) / 2 * H },
+      dailySolar: { x: (right + 1) / 2 * W, y: mid * H },
+      marketPrices: { x: (right + 1) / 2 * W, y: (mid + bot) / 2 * H },
+      boxW: Math.min(88, W * 0.14),
+      boxH: Math.min(56, H * 0.16),
+      infoW: Math.min(120, W * 0.18),
+      infoH: Math.min(64, H * 0.18),
+    };
+  }, [dimensions]);
+
+  const connections = validConnections?.length ? validConnections : DEFAULT_VALID_CONNECTIONS;
+
+  // Active path definitions: which connections are active and their color
+  const activeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const pd of pathDefinitions) {
+      const from = normalizeNode(pd.from);
+      const to = normalizeNode(pd.to);
+      const key = [from, to].sort().join("|");
+      const color = (pd.color || "").toLowerCase();
+      const rgb =
+        color === "yellow" || color === "orange" ? flowColors.solar
+        : color === "green" ? flowColors.battery
+        : color === "red" ? flowColors.grid
+        : flowColors[pd.source?.includes("solar") ? "solar" : pd.source?.includes("battery") ? "battery" : "grid"];
+      if (!map.has(key)) map.set(key, rgb);
     }
+    return map;
+  }, [pathDefinitions]);
 
-    // Battery <-> Inverter (green)
-    if (Math.abs(batteryKw) > threshold) {
-      if (batteryKw > 0) {
-        result.push({ from: "battery", to: "inverter", powerKw: batteryKw, color: flowColors.battery, fromSide: "left", toSide: "right" });
-      } else {
-        result.push({ from: "inverter", to: "battery", powerKw: Math.abs(batteryKw), color: flowColors.battery, fromSide: "right", toSide: "left" });
-      }
+  // L-path: center A -> right angle (aligned with B) -> center B
+  const makePath = (from: { x: number; y: number }, to: { x: number; y: number }): string => {
+    const dx = Math.abs(to.x - from.x);
+    const dy = Math.abs(to.y - from.y);
+    if (dx < 1 && dy < 1) return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+    if (dx > dy) {
+      return `M ${from.x} ${from.y} L ${to.x} ${from.y} L ${to.x} ${to.y}`;
     }
-
-    // Grid <-> GridMeter (red)
-    if (Math.abs(gridKw) > threshold) {
-      if (gridKw > 0) {
-        result.push({ from: "grid", to: "gridMeter", powerKw: gridKw, color: flowColors.grid, fromSide: "top", toSide: "bottom" });
-      } else {
-        result.push({ from: "gridMeter", to: "grid", powerKw: Math.abs(gridKw), color: flowColors.grid, fromSide: "bottom", toSide: "top" });
-      }
-    }
-
-    // GridMeter <-> Inverter (red) - when grid supplies inverter
-    const gridImporting = gridKw > threshold;
-    const inverterToBuilding = Math.min(loadKw, solarKw + (batteryKw > 0 ? batteryKw : 0));
-    const gridToInverter = gridImporting ? Math.max(0, loadKw - inverterToBuilding) : 0;
-    if (gridToInverter > threshold) {
-      result.push({ from: "gridMeter", to: "inverter", powerKw: gridToInverter, color: flowColors.grid, fromSide: "right", toSide: "left" });
-    } else if (gridKw < -threshold) {
-      // Export: color by dominant source (solar or battery)
-      const solarExport = Math.min(solarKw, Math.abs(gridKw));
-      const batteryExport = Math.abs(gridKw) - solarExport;
-      const exportColor = solarExport >= batteryExport ? flowColors.solar : flowColors.battery;
-      result.push({ from: "inverter", to: "gridMeter", powerKw: Math.abs(gridKw), color: exportColor, fromSide: "left", toSide: "right" });
-    }
-
-    // Building: one connector from dominant source (inverter or grid)
-    const solarToBuilding = Math.min(solarKw, loadKw);
-    const batteryToBuilding = batteryKw > 0 ? Math.min(batteryKw, loadKw - solarToBuilding) : 0;
-    const invToBld = solarToBuilding + batteryToBuilding;
-    const gridToBuilding = gridImporting ? Math.min(gridKw, loadKw - invToBld) : 0;
-    if (invToBld >= gridToBuilding && invToBld > threshold) {
-      const buildingColor = batteryToBuilding > solarToBuilding ? flowColors.battery : flowColors.solar;
-      result.push({ from: "inverter", to: "building", powerKw: invToBld, color: buildingColor, fromSide: "top", toSide: "bottom" });
-    } else if (gridToBuilding > threshold) {
-      result.push({ from: "gridMeter", to: "building", powerKw: gridToBuilding, color: flowColors.grid, fromSide: "top", toSide: "left" });
-    }
-
-    return result;
-  }, [solarKw, batteryKw, gridKw, loadKw]);
-
-  // Calculate connection points
-  // When both nodes are inverter/battery, use 30%/50%/70% offsets
-  // Otherwise use 40%/60%/50% offsets
-  const getConnectionPoint = (node: string, side: Side, offset: "left" | "right" | "center" = "center", otherNode?: string) => {
-    const pos = positions[node as keyof typeof positions];
-    const halfW = boxWidth / 2;
-    const halfH = boxHeight / 2;
-    
-    // Check if this is an inverter ↔ battery connection
-    const isInverterBatteryConnection = (node === "inverter" || node === "battery") && 
-                                       (otherNode === "inverter" || otherNode === "battery");
-    
-    switch (side) {
-      case "top":
-        // Top edge: 60% and 40% of width (so right offset is at 60%, left offset is at 40%)
-        if (offset === "left") {
-          return { x: pos.x - halfW * 0.2, y: pos.y - halfH }; // 40% from left
-        } else if (offset === "right") {
-          return { x: pos.x + halfW * 0.2, y: pos.y - halfH }; // 60% from left
-        } else {
-          return { x: pos.x, y: pos.y - halfH };
-        }
-      case "bottom":
-        // Bottom edge: 40% and 60% of width
-        if (offset === "left") {
-          return { x: pos.x - halfW * 0.2, y: pos.y + halfH }; // 40% from left
-        } else if (offset === "right") {
-          return { x: pos.x + halfW * 0.2, y: pos.y + halfH }; // 60% from left
-        } else {
-          return { x: pos.x, y: pos.y + halfH };
-        }
-      case "left":
-        // Left edge:
-        // - For inverter ↔ battery connections: 30%/50%/70% of height
-        // - For all other connections: 40%/60%/50% of height
-        if (isInverterBatteryConnection) {
-          if (offset === "left") {
-            return { x: pos.x - halfW, y: pos.y - halfH * 0.4 }; // 30% from top
-          } else if (offset === "right") {
-            return { x: pos.x - halfW, y: pos.y + halfH * 0.4 }; // 70% from top
-          } else {
-            return { x: pos.x - halfW, y: pos.y };               // 50% from top
-          }
-        } else {
-          if (offset === "left") {
-            return { x: pos.x - halfW, y: pos.y - halfH * 0.2 }; // 40% from top
-          } else if (offset === "right") {
-            return { x: pos.x - halfW, y: pos.y + halfH * 0.2 }; // 60% from top
-          } else {
-            return { x: pos.x - halfW, y: pos.y };
-          }
-        }
-      case "right":
-        // Right edge:
-        // - For inverter ↔ battery connections: 30%/50%/70% of height
-        // - For all other connections: 40%/60%/50% of height
-        if (isInverterBatteryConnection) {
-          if (offset === "left") {
-            return { x: pos.x + halfW, y: pos.y - halfH * 0.4 }; // 30% from top
-          } else if (offset === "right") {
-            return { x: pos.x + halfW, y: pos.y + halfH * 0.4 }; // 70% from top
-          } else {
-            return { x: pos.x + halfW, y: pos.y };               // 50% from top
-          }
-        } else {
-          if (offset === "left") {
-            return { x: pos.x + halfW, y: pos.y - halfH * 0.2 }; // 40% from top
-          } else if (offset === "right") {
-            return { x: pos.x + halfW, y: pos.y + halfH * 0.2 }; // 60% from top
-          } else {
-            return { x: pos.x + halfW, y: pos.y };
-          }
-        }
-      default:
-        return pos;
-    }
+    return `M ${from.x} ${from.y} L ${from.x} ${to.y} L ${to.x} ${to.y}`;
   };
 
-  // Create right-angled path (always right-angled)
-  // For vertical connections: go up/down first (90 deg), then horizontal
-  // For horizontal connections: go horizontal first, then vertical
-  // Special case: right-angle from top to left (Grid Meter to Building)
-  const createRightAnglePath = (from: { x: number; y: number }, to: { x: number; y: number }, fromSide: Side, toSide: Side, isRightAngle?: boolean): string => {
-    // Special right-angle path: from top to left (e.g., Grid Meter top to Building left)
-    if (isRightAngle && fromSide === "top" && toSide === "left") {
-      const midY = Math.min(from.y - 20, to.y + 20);
-      return `M ${from.x} ${from.y} L ${from.x} ${midY} L ${to.x} ${midY} L ${to.x} ${to.y}`;
-    }
-    // Determine intermediate point for right angle
-    let midX = from.x;
-    let midY = from.y;
-
-    // Strategy based on connection type
-    if (fromSide === "top" || fromSide === "bottom") {
-      // Vertical connection: go vertical first (straight up/down at 90 deg), then horizontal
-      if (toSide === "left" || toSide === "right") {
-        // Vertical to horizontal: go to target's Y first (straight up/down), then horizontal to target's X
-        midX = from.x;
-        midY = to.y;
-      } else {
-        // Both vertical (top/bottom): go straight up/down first (90 deg), then horizontal to align X positions
-        if (Math.abs(from.x - to.x) > 1) {
-          // X positions differ: go straight up/down to target Y, then horizontal to target X
-          midX = from.x;
-          midY = to.y; // First go straight vertical to target's Y level
-        } else {
-          // X positions same: straight vertical line (no horizontal segment needed)
-          // But still need a midpoint for the path command
-          midX = from.x;
-          midY = (from.y + to.y) / 2;
-        }
-      }
-    } else if (fromSide === "left" || fromSide === "right") {
-      // Horizontal connection: go horizontal first, then vertical
-      if (toSide === "top" || toSide === "bottom") {
-        // Horizontal to vertical: go to target's X first, then vertical to target's Y
-        midX = to.x;
-        midY = from.y;
-      } else {
-        // Both horizontal: go straight left/right
-        midX = (from.x + to.x) / 2;
-        midY = from.y;
-      }
-    }
-
-    return `M ${from.x} ${from.y} L ${midX} ${midY} L ${to.x} ${to.y}`;
+  const getCenter = (node: string) => {
+    const key = node as keyof typeof layout;
+    const pos = layout[key];
+    if (!pos || typeof pos === "number") return { x: 0, y: 0 };
+    return { x: pos.x, y: pos.y };
   };
 
-  // Animated time display - updates every second, value comes from Consumption.csv
-  const [currentTime, setCurrentTime] = useState<string>("");
-  
-  // Cumulative sums for daily consumption and solar production
-  // CSV values appear to be incremental per 15-min period, so we sum them
-  const [dailyConsumptionSum, setDailyConsumptionSum] = useState<number>(0);
-  const [dailySolarSum, setDailySolarSum] = useState<number>(0);
-  const lastTimeRef = useRef<string>("");
+  const [currentTime, setCurrentTime] = useState("");
+  const [dailyConsumptionSum, setDailyConsumptionSum] = useState(0);
+  const [dailySolarSum, setDailySolarSum] = useState(0);
+  const lastTimeRef = useRef("");
   const processedRowsRef = useRef<Set<string>>(new Set());
-  
-  // Update cumulative sums when buildingConsumption or solarProduction changes
+
   useEffect(() => {
     if (buildingConsumption !== undefined && solarProduction !== undefined && displayTime) {
-      // Reset if time goes backwards (new day cycle)
       if (displayTime < lastTimeRef.current) {
         setDailyConsumptionSum(0);
         setDailySolarSum(0);
         processedRowsRef.current.clear();
       }
-      
-      // Only add if we haven't processed this time yet
       if (!processedRowsRef.current.has(displayTime)) {
-        setDailyConsumptionSum(prev => prev + buildingConsumption);
-        setDailySolarSum(prev => prev + solarProduction);
+        setDailyConsumptionSum((p) => p + buildingConsumption);
+        setDailySolarSum((p) => p + solarProduction);
         processedRowsRef.current.add(displayTime);
       }
-      
       lastTimeRef.current = displayTime;
     }
   }, [buildingConsumption, solarProduction, displayTime]);
-  
-  // Helper to get tariff color
-  const getTariffColor = (tariffValue: string, isExport: boolean = false) => {
-    const tariff = (tariffValue || "").toLowerCase();
+
+  const getTariffColor = (tariffValue: string, isExport: boolean) => {
+    const t = (tariffValue || "").toLowerCase();
     if (isExport) {
-      // Export: Super Low (Red), Low (Orange), Mid (Yellow), Peak (Green)
-      if (tariff.includes("super low")) return "text-red-300";
-      if (tariff.includes("low")) return "text-orange-300";
-      if (tariff.includes("mid")) return "text-yellow-300";
-      if (tariff.includes("peak")) return "text-green-300";
+      if (t.includes("super low")) return "text-red-300";
+      if (t.includes("low")) return "text-orange-300";
+      if (t.includes("mid")) return "text-yellow-300";
+      if (t.includes("peak")) return "text-green-300";
     } else {
-      // Spot: Super Low (Green), Low (Yellow), Mid (Orange), Peak (Red)
-      if (tariff.includes("super low")) return "text-green-300";
-      if (tariff.includes("low")) return "text-yellow-300";
-      if (tariff.includes("mid")) return "text-orange-300";
-      if (tariff.includes("peak")) return "text-red-300";
+      if (t.includes("super low")) return "text-green-300";
+      if (t.includes("low")) return "text-yellow-300";
+      if (t.includes("mid")) return "text-orange-300";
+      if (t.includes("peak")) return "text-red-300";
     }
     return "text-slate-300";
   };
-  
+
   useEffect(() => {
-    const updateTime = () => {
-      if (displayTime) {
-        // Primary source: TIME column from Consumption.csv
-        setCurrentTime(displayTime);
+    if (displayTime) setCurrentTime(displayTime);
+    else {
+      const ts = snapshot?.timestamp || overview?.timestamp;
+      if (ts) {
+        const d = new Date(ts);
+        setCurrentTime(d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }));
       } else {
-        // Fallback: use snapshot or overview timestamp
+        const n = new Date();
+        setCurrentTime(n.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }));
+      }
+    }
+    const iv = setInterval(() => {
+      if (!displayTime && (snapshot?.timestamp || overview?.timestamp)) {
         const ts = snapshot?.timestamp || overview?.timestamp;
         if (ts) {
-          const date = new Date(ts);
-          setCurrentTime(
-            date.toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: false,
-            })
-          );
-        } else {
-          const now = new Date();
-          setCurrentTime(
-            now.toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: false,
-            })
-          );
+          const d = new Date(ts);
+          setCurrentTime(d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }));
         }
       }
-    };
-
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(iv);
   }, [displayTime, snapshot?.timestamp, overview?.timestamp]);
+
+  const boxStyle = (x: number, y: number, w: number, h: number) => ({
+    left: x - w / 2,
+    top: y - h / 2,
+    width: w,
+    height: h,
+  });
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
         <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">Energy Flow</div>
-        {currentTime && (
-          <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">
-            {currentTime}
-          </div>
-        )}
+        {currentTime && <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">{currentTime}</div>}
       </div>
-      <div
-        ref={containerRef}
-        className="w-full max-w-[680px] min-w-0 mx-auto overflow-hidden"
-        style={{ aspectRatio: `${diagramWidth}/${diagramHeight}` }}
-      >
-        <div
-          className="relative origin-top-left"
-          style={{
-            width: diagramWidth,
-            height: diagramHeight,
-            transform: `scale(${scale})`,
-          }}
-        >
-        <svg width="680" height="320" className="absolute inset-0">
-          {/* One connector per connection: colored by source (yellow=solar, green=battery, red=grid), direction shown by animated dot */}
-          {singleFlows.map((flow, idx) => {
-            const fromPoint = getConnectionPoint(flow.from, flow.fromSide, "center", flow.to);
-            const toPoint = getConnectionPoint(flow.to, flow.toSide, "center", flow.from);
-            const isRightAngle = flow.fromSide === "top" && flow.toSide === "left";
-            const path = createRightAnglePath(fromPoint, toPoint, flow.fromSide, flow.toSide, isRightAngle);
+      <div ref={containerRef} className="relative w-full max-w-[680px] min-w-0 mx-auto overflow-hidden" style={{ aspectRatio: "680/320" }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${dimensions.h}`} preserveAspectRatio="xMidYMid meet" className="block">
+          {/* Grey base lines for all valid connections */}
+          {connections.map((conn, i) => {
+            const from = getCenter(normalizeNode(conn.from));
+            const to = getCenter(normalizeNode(conn.to));
+            const path = makePath(from, to);
             return (
-              <g key={`flow-${flow.from}-${flow.to}-${idx}`}>
-                <path
-                  d={path}
-                  fill="none"
-                  stroke={flow.color}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ filter: `drop-shadow(0 0 2px ${flow.color})` }}
-                />
-                <circle r="3" fill={flow.color} style={{ filter: `drop-shadow(0 0 4px ${flow.color})` }}>
+              <path
+                key={`base-${i}`}
+                d={path}
+                fill="none"
+                stroke={flowColors.inactive}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            );
+          })}
+          {/* Active colored overlay */}
+          {connections.map((conn, i) => {
+            const from = getCenter(normalizeNode(conn.from));
+            const to = getCenter(normalizeNode(conn.to));
+            const key = [normalizeNode(conn.from), normalizeNode(conn.to)].sort().join("|");
+            const color = activeMap.get(key);
+            if (!color) return null;
+            const path = makePath(from, to);
+            return (
+              <g key={`active-${i}`}>
+                <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 2px ${color})` }} />
+                <circle r="3" fill={color} style={{ filter: `drop-shadow(0 0 4px ${color})` }}>
                   <animateMotion dur="2s" repeatCount="indefinite" path={path} />
                 </circle>
               </g>
@@ -428,179 +272,99 @@ export function EnergyFlowDiagram({ snapshot, overview, displayTime, buildingCon
           })}
         </svg>
 
-        {/* Component boxes */}
-        {/* Building */}
-        <div
-          className="absolute bg-slate-700/80 rounded-lg p-2 border-2 border-slate-600 flex flex-col justify-start"
-          style={{
-            left: positions.building.x - boxWidth / 2,
-            top: positions.building.y - boxHeight / 2,
-            width: boxWidth,
-            height: boxHeight,
-          }}
-        >
-          <div className="flex items-center gap-1 mb-0.5">
-            <div className="text-base">🏢</div>
-            <div className="text-[10px] font-semibold text-slate-300">BUILDING</div>
+        {/* Boxes - positioned absolutely over SVG */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute pointer-events-auto" style={boxStyle(layout.building.x, layout.building.y, layout.boxW, layout.boxH)}>
+            <div className="h-full bg-slate-700/80 rounded-lg p-1.5 border-2 border-slate-600 flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center gap-0.5 min-w-0">
+                <span className="text-sm shrink-0">🏢</span>
+                <span className="text-[9px] font-semibold text-slate-300 truncate">BUILDING</span>
+              </div>
+              <div className="text-[10px] font-mono text-slate-300 truncate">{loadKw.toFixed(1)}{loadKw !== 0 ? " kW" : ""}</div>
+            </div>
           </div>
-          <div className="text-xs font-mono text-slate-300">
-            {loadKw.toFixed(1)}{loadKw !== 0 ? " kW" : ""}
-          </div>
-        </div>
 
-        {/* Grid */}
-        <div
-          className="absolute bg-blue-900/40 rounded-lg p-2 border-2 border-blue-500/50 flex flex-col justify-start"
-          style={{
-            left: positions.grid.x - boxWidth / 2,
-            top: positions.grid.y - boxHeight / 2,
-            width: boxWidth,
-            height: boxHeight,
-          }}
-        >
-          <div className="flex items-center gap-1 mb-0.5">
-            <div className="text-base">⚡</div>
-            <div className="text-[10px] font-semibold text-blue-300">GRID</div>
+          <div className="absolute pointer-events-auto" style={boxStyle(layout.grid.x, layout.grid.y, layout.boxW, layout.boxH)}>
+            <div className="h-full bg-blue-900/40 rounded-lg p-1.5 border-2 border-blue-500/50 flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center gap-0.5 min-w-0">
+                <span className="text-sm shrink-0">⚡</span>
+                <span className="text-[9px] font-semibold text-blue-300 truncate">GRID</span>
+              </div>
+              <div className={`text-[10px] font-mono truncate ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>{gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)}{gridKw !== 0 ? " kW" : ""}</div>
+            </div>
           </div>
-          <div className={`text-xs font-mono ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>
-            {gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)}{gridKw !== 0 ? " kW" : ""}
-          </div>
-        </div>
 
-        {/* Grid Meter */}
-        <div
-          className="absolute bg-red-900/40 rounded-lg p-2 border-2 border-red-500/50 flex flex-col justify-start"
-          style={{
-            left: positions.gridMeter.x - boxWidth / 2,
-            top: positions.gridMeter.y - boxHeight / 2,
-            width: boxWidth,
-            height: boxHeight,
-          }}
-        >
-          <div className="flex items-center gap-1 mb-0.5">
-            <div className="text-base">📊</div>
-            <div className="text-[10px] font-semibold text-red-300">GRID METER</div>
+          <div className="absolute pointer-events-auto" style={boxStyle(layout.gridMeter.x, layout.gridMeter.y, layout.boxW, layout.boxH)}>
+            <div className="h-full bg-red-900/40 rounded-lg p-1.5 border-2 border-red-500/50 flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center gap-0.5 min-w-0">
+                <span className="text-sm shrink-0">📊</span>
+                <span className="text-[9px] font-semibold text-red-300 truncate">METER</span>
+              </div>
+              <div className="text-[10px] font-mono text-red-300 truncate">{Math.abs(gridKw).toFixed(1)}{Math.abs(gridKw) !== 0 ? " kW" : ""}</div>
+            </div>
           </div>
-          <div className="text-xs font-mono text-red-300">
-            {Math.abs(gridKw).toFixed(1)}{Math.abs(gridKw) !== 0 ? " kW" : ""}
-          </div>
-        </div>
 
-        {/* Inverter */}
-        <div
-          className="absolute bg-slate-700/80 rounded-lg p-2 border-2 border-slate-500 flex flex-col justify-start"
-          style={{
-            left: positions.inverter.x - boxWidth / 2,
-            top: positions.inverter.y - boxHeight / 2,
-            width: boxWidth,
-            height: boxHeight,
-          }}
-        >
-          <div className="flex items-center gap-1 mb-0.5">
-            <div className="text-base">🔄</div>
-            <div className="text-[10px] font-semibold text-slate-300">INVERTER</div>
+          <div className="absolute pointer-events-auto" style={boxStyle(layout.inverter.x, layout.inverter.y, layout.boxW, layout.boxH)}>
+            <div className="h-full bg-slate-700/80 rounded-lg p-1.5 border-2 border-slate-500 flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center gap-0.5 min-w-0">
+                <span className="text-sm shrink-0">🔄</span>
+                <span className="text-[9px] font-semibold text-slate-300 truncate">INV</span>
+              </div>
+              <div className="text-[10px] font-mono text-slate-300 truncate">DC↔AC</div>
+            </div>
           </div>
-          <div className="text-xs font-mono text-slate-300">DC↔AC</div>
-        </div>
 
-        {/* Solar */}
-        <div
-          className="absolute bg-amber-900/40 rounded-lg p-2 border-2 border-amber-500/50 flex flex-col justify-start"
-          style={{
-            left: positions.solar.x - boxWidth / 2,
-            top: positions.solar.y - boxHeight / 2,
-            width: boxWidth,
-            height: boxHeight,
-          }}
-        >
-          <div className="flex items-center gap-1 mb-0.5">
-            <div className="text-base">☀️</div>
-            <div className="text-[10px] font-semibold text-amber-300">SOLAR</div>
+          <div className="absolute pointer-events-auto" style={boxStyle(layout.solar.x, layout.solar.y, layout.boxW, layout.boxH)}>
+            <div className="h-full bg-amber-900/40 rounded-lg p-1.5 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center gap-0.5 min-w-0">
+                <span className="text-sm shrink-0">☀️</span>
+                <span className="text-[9px] font-semibold text-amber-300 truncate">SOLAR</span>
+              </div>
+              <div className="text-[10px] font-mono text-amber-300 truncate">{solarKw.toFixed(1)}{solarKw !== 0 ? " kW" : ""}</div>
+            </div>
           </div>
-          <div className="text-xs font-mono text-amber-300">
-            {solarKw.toFixed(1)}{solarKw !== 0 ? " kW" : ""}
-          </div>
-        </div>
 
-        {/* Battery */}
-        <div
-          className="absolute bg-emerald-900/40 rounded-lg p-2 border-2 border-emerald-500/50 flex flex-col justify-start"
-          style={{
-            left: positions.battery.x - boxWidth / 2,
-            top: positions.battery.y - boxHeight / 2,
-            width: boxWidth,
-            height: boxHeight,
-          }}
-        >
-          <div className="flex items-center gap-1 mb-0.5">
-            <div className="text-base">🔋</div>
-            <div className="text-[10px] font-semibold text-emerald-300">BATTERY</div>
+          <div className="absolute pointer-events-auto" style={boxStyle(layout.battery.x, layout.battery.y, layout.boxW, layout.boxH)}>
+            <div className="h-full bg-emerald-900/40 rounded-lg p-1.5 border-2 border-emerald-500/50 flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center gap-0.5 min-w-0">
+                <span className="text-sm shrink-0">🔋</span>
+                <span className="text-[9px] font-semibold text-emerald-300 truncate">BATT</span>
+              </div>
+              <div className="text-[10px] font-mono text-emerald-300 truncate">{batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)}{batteryKw !== 0 ? " kW" : ""}</div>
+              <div className="text-[9px] text-slate-400 truncate">{soc.toFixed(0)}%</div>
+            </div>
           </div>
-          <div className="text-xs font-mono text-emerald-300">
-            {batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)}{batteryKw !== 0 ? " kW" : ""}
-          </div>
-          <div className="text-[10px] text-slate-400">{soc.toFixed(0)}% SOC</div>
-        </div>
 
-        {/* Daily Consumption */}
-        <div
-          className="absolute bg-slate-700/80 rounded-lg p-2 border-2 border-slate-600 flex flex-col justify-start"
-          style={{
-            left: positions.dailyConsumption.x - boxWidth / 2,
-            top: positions.dailyConsumption.y - boxHeight / 2,
-            width: boxInfoWidth,
-            height: boxInfoHeight,
-          }}
-        >
-          <div className="flex items-center gap-1 mb-0.5">
-            <div className="text-base">📈</div>
-            <div className="text-[10px] font-semibold text-slate-300">Daily Consumption</div>
+          <div className="absolute pointer-events-auto" style={boxStyle(layout.dailyConsumption.x, layout.dailyConsumption.y, layout.infoW, layout.infoH)}>
+            <div className="h-full bg-slate-700/80 rounded-lg p-1.5 border-2 border-slate-600 flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center gap-0.5 min-w-0">
+                <span className="text-sm shrink-0">📈</span>
+                <span className="text-[9px] font-semibold text-slate-300 truncate">Daily</span>
+              </div>
+              <div className="text-[10px] font-mono text-slate-300 truncate">{dailyConsumptionSum.toFixed(2)} kWh</div>
+            </div>
           </div>
-          <div className="text-xs font-mono text-slate-300">
-            {dailyConsumptionSum.toFixed(2)} kWh
-          </div>
-        </div>
 
-        {/* Daily Solar Production */}
-        <div
-          className="absolute bg-amber-900/40 rounded-lg p-2 border-2 border-amber-500/50 flex flex-col justify-start"
-          style={{
-            left: positions.dailySolar.x - boxWidth / 2,
-            top: positions.dailySolar.y - boxHeight / 2,
-            width: boxInfoWidth,
-            height: boxInfoHeight,
-          }}
-        >
-          <div className="flex items-center gap-1 mb-0.5">
-            <div className="text-base">☀️</div>
-            <div className="text-[10px] font-semibold text-amber-300">Daily Solar</div>
+          <div className="absolute pointer-events-auto" style={boxStyle(layout.dailySolar.x, layout.dailySolar.y, layout.infoW, layout.infoH)}>
+            <div className="h-full bg-amber-900/40 rounded-lg p-1.5 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center gap-0.5 min-w-0">
+                <span className="text-sm shrink-0">☀️</span>
+                <span className="text-[9px] font-semibold text-amber-300 truncate">Solar</span>
+              </div>
+              <div className="text-[10px] font-mono text-amber-300 truncate">{dailySolarSum.toFixed(2)} kWh</div>
+            </div>
           </div>
-          <div className="text-xs font-mono text-amber-300">
-            {dailySolarSum.toFixed(2)} kWh
-          </div>
-        </div>
 
-        {/* Market Prices */}
-        <div
-          className="absolute bg-slate-700/80 rounded-lg p-2 border-2 border-slate-600 flex flex-col justify-start"
-          style={{
-            left: positions.marketPrices.x - boxWidth / 2,
-            top: positions.marketPrices.y - boxHeight / 2,
-            width: boxInfoWidth,
-            height: boxInfoHeight,
-          }}
-        >
-          <div className="flex items-center gap-1 mb-0.5">
-            <div className="text-base">💰</div>
-            <div className="text-[10px] font-semibold text-slate-300">Market Prices</div>
+          <div className="absolute pointer-events-auto" style={boxStyle(layout.marketPrices.x, layout.marketPrices.y, layout.infoW, layout.infoH)}>
+            <div className="h-full bg-slate-700/80 rounded-lg p-1.5 border-2 border-slate-600 flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center gap-0.5 min-w-0">
+                <span className="text-sm shrink-0">💰</span>
+                <span className="text-[9px] font-semibold text-slate-300 truncate">Prices</span>
+              </div>
+              <div className={`text-[10px] font-mono truncate ${getTariffColor(tariff || "", false)}`}>Buy: {buyPrice !== undefined ? buyPrice.toFixed(0) : "—"}</div>
+              <div className={`text-[10px] font-mono truncate ${getTariffColor(tariff || "", true)}`}>Exp: {exportPrice !== undefined ? exportPrice.toFixed(0) : "—"}</div>
+            </div>
           </div>
-          <div className={`text-xs font-mono ${getTariffColor(tariff || "", false)}`}>
-            Buy: {buyPrice !== undefined ? buyPrice.toFixed(0) : "—"} €/MWh
-          </div>
-          <div className={`text-xs font-mono ${getTariffColor(tariff || "", true)}`}>
-            Export: {exportPrice !== undefined ? exportPrice.toFixed(0) : "—"} €/MWh
-          </div>
-        </div>
         </div>
       </div>
     </div>
