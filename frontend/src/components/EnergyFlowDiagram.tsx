@@ -153,6 +153,27 @@ export function EnergyFlowDiagram({
     return { x: pos.x, y: pos.y };
   };
 
+  // Gateway->Building uses edge anchors (gateway top -> building left) to avoid overlapping with gateway->inverter
+  const getConnectionEndpoints = (fromNode: string, toNode: string) => {
+    const a = normalizeNode(fromNode);
+    const b = normalizeNode(toNode);
+    const fromCenter = getCenter(a);
+    const toCenter = getCenter(b);
+    const { boxW, boxH } = layout;
+    const isGatewayBuilding =
+      (a === "gridMeter" && b === "building") || (a === "building" && b === "gridMeter");
+    if (isGatewayBuilding) {
+      const gateway = getCenter("gridMeter");
+      const building = getCenter("building");
+      const gatewayTop = { x: gateway.x, y: gateway.y - boxH / 2 };
+      const buildingLeft = { x: building.x - boxW / 2, y: building.y };
+      return a === "gridMeter"
+        ? { from: gatewayTop, to: buildingLeft }
+        : { from: buildingLeft, to: gatewayTop };
+    }
+    return { from: fromCenter, to: toCenter };
+  };
+
   const [currentTime, setCurrentTime] = useState("");
 
   useEffect(() => {
@@ -196,8 +217,7 @@ export function EnergyFlowDiagram({
         <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${dimensions.h}`} preserveAspectRatio="xMidYMid meet" className="block" style={{ zIndex: 0 }}>
           {/* Grey base lines for all valid connections */}
           {connections.map((conn, i) => {
-            const from = getCenter(normalizeNode(conn.from));
-            const to = getCenter(normalizeNode(conn.to));
+            const { from, to } = getConnectionEndpoints(conn.from, conn.to);
             const path = makePath(from, to);
             return (
               <path
@@ -213,8 +233,7 @@ export function EnergyFlowDiagram({
           })}
           {/* Active paths: from pathDefinitions (PATH in Consumption.csv -> Paths.csv lookup) */}
           {pathDefinitions.map((pd, i) => {
-            const from = getCenter(normalizeNode(pd.from));
-            const to = getCenter(normalizeNode(pd.to));
+            const { from, to } = getConnectionEndpoints(pd.from, pd.to);
             const color = resolveColor(pd);
             const path = makePath(from, to);
             return (
