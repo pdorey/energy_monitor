@@ -47,7 +47,7 @@ const DEFAULT_VALID_CONNECTIONS: Array<{ from: string; to: string }> = [
 
 function normalizeNode(name: string): string {
   const n = name.toLowerCase().replace(/\s+/g, "");
-  if (n === "gridmeter") return "gridMeter";
+  if (n === "gridmeter" || n === "gateway") return "gridMeter";
   return n;
 }
 

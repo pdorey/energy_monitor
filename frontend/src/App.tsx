@@ -162,6 +162,7 @@ export function App() {
   }, [tab, intradayData.length, loading, fetchIntraday]);
 
   const soc = snapshot?.battery.soc_percent ?? overview?.battery_soc_percent ?? 0;
+  const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
 
   // Cumulative daily consumption and solar (from consumption data)
   const [dailyConsumptionSum, setDailyConsumptionSum] = useState(0);
@@ -254,9 +255,10 @@ export function App() {
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Battery</div>
-                <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold text-emerald-300">
-                  {soc.toFixed(0)} <span className="text-sm">% SOC</span>
+                <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-semibold text-emerald-300">
+                  {batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)} kW
                 </div>
+                <div className="text-sm text-slate-400 mt-0.5">{soc.toFixed(0)}% SOC</div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Daily</div>

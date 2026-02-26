@@ -360,7 +360,7 @@ async def get_consumption_data():
                     n = name.strip().upper().replace(" ", "")
                     if n == "GRID":
                         return "grid"
-                    if n == "GRIDMETER":
+                    if n == "GRIDMETER" or n == "GATEWAY":
                         return "gridMeter"
                     if n == "INVERTER":
                         return "inverter"
