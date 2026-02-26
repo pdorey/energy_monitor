@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { fetchJSON } from "./api/client";
 import { useLiveData } from "./hooks/useLiveData";
 import { EnergyFlowDiagram } from "./components/EnergyFlowDiagram";
@@ -82,8 +82,25 @@ export function App() {
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [consumptionData, setConsumptionData] = useState<ConsumptionData | null>(null);
   const [intradayData, setIntradayData] = useState<any[]>([]);
+  const [intradayError, setIntradayError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { snapshot, status: wsStatus } = useLiveData();
+
+  const fetchIntraday = useCallback(async () => {
+    try {
+      setIntradayError(null);
+      const res = await fetchJSON<{ data?: any[]; error?: string }>("/api/intraday-analytics");
+      if (res.error) {
+        setIntradayError(res.error);
+        setIntradayData([]);
+      } else {
+        setIntradayData(res.data || []);
+      }
+    } catch {
+      setIntradayError("Failed to load analytics");
+      setIntradayData([]);
+    }
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -92,12 +109,18 @@ export function App() {
           fetchJSON<Overview>("/api/overview"),
           fetchJSON<EquipmentItem[]>("/api/equipment"),
           fetchJSON<ConsumptionData>("/api/consumption-data").catch(() => null),
-          fetchJSON<{ data: any[] }>("/api/intraday-analytics").catch(() => ({ data: [] })),
+          fetchJSON<{ data?: any[]; error?: string }>("/api/intraday-analytics").catch(() => ({ data: [] as any[] })),
         ]);
         setOverview(ov);
         setEquipment(eq);
         setConsumptionData(consumption);
-        setIntradayData(intraday.data || []);
+        const intradayRes = intraday as { data?: any[]; error?: string } | undefined;
+        if (intradayRes?.error) {
+          setIntradayError(intradayRes.error);
+          setIntradayData([]);
+        } else {
+          setIntradayData(intradayRes?.data || []);
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -129,6 +152,13 @@ export function App() {
       }
     };
   }, []);
+
+  // Refetch intraday when switching to analytics tab (in case initial load failed)
+  useEffect(() => {
+    if (tab === "analytics" && intradayData.length === 0 && !loading) {
+      fetchIntraday();
+    }
+  }, [tab, intradayData.length, loading, fetchIntraday]);
 
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
   //const gridKw = snapshot?.grid.power_w ? snapshot.grid.power_w / 1000 : overview?.grid_kw ?? 0;
@@ -257,8 +287,19 @@ export function App() {
                 currentTime={consumptionData?.time}
               />
             ) : (
-              <div className="text-slate-400 text-sm">
-                Loading analytics data...
+              <div className="space-y-2">
+                {intradayError && (
+                  <div className="text-amber-400 text-sm">{intradayError}</div>
+                )}
+                <div className="text-slate-400 text-sm">
+                  {intradayError ? "Retry by switching tabs or refreshing." : "Loading analytics data..."}
+                </div>
+                <button
+                  onClick={fetchIntraday}
+                  className="text-sm px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-300"
+                >
+                  Retry
+                </button>
               </div>
             )}
           </div>
