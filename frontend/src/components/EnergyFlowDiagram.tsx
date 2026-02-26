@@ -135,11 +135,18 @@ export function EnergyFlowDiagram({
     return flowColors.grid;
   };
 
-  // L-path: center A -> right angle (aligned with B) -> center B
-  const makePath = (from: { x: number; y: number }, to: { x: number; y: number }): string => {
+  // L-path: center A -> right angle -> center B. verticalFirst: up/down then left/right (for gateway->building)
+  const makePath = (
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    verticalFirst?: boolean
+  ): string => {
     const dx = Math.abs(to.x - from.x);
     const dy = Math.abs(to.y - from.y);
     if (dx < 1 && dy < 1) return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+    if (verticalFirst) {
+      return `M ${from.x} ${from.y} L ${from.x} ${to.y} L ${to.x} ${to.y}`;
+    }
     if (dx > dy) {
       return `M ${from.x} ${from.y} L ${to.x} ${from.y} L ${to.x} ${to.y}`;
     }
@@ -153,7 +160,7 @@ export function EnergyFlowDiagram({
     return { x: pos.x, y: pos.y };
   };
 
-  // Gateway->Building uses edge anchors (gateway top -> building left) to avoid overlapping with gateway->inverter
+  // Gateway->Building: edge anchors (gateway top -> building left), path goes up then right
   const getConnectionEndpoints = (fromNode: string, toNode: string) => {
     const a = normalizeNode(fromNode);
     const b = normalizeNode(toNode);
@@ -167,11 +174,13 @@ export function EnergyFlowDiagram({
       const building = getCenter("building");
       const gatewayTop = { x: gateway.x, y: gateway.y - boxH / 2 };
       const buildingLeft = { x: building.x - boxW / 2, y: building.y };
-      return a === "gridMeter"
-        ? { from: gatewayTop, to: buildingLeft }
-        : { from: buildingLeft, to: gatewayTop };
+      return {
+        from: a === "gridMeter" ? gatewayTop : buildingLeft,
+        to: a === "gridMeter" ? buildingLeft : gatewayTop,
+        verticalFirst: true,
+      };
     }
-    return { from: fromCenter, to: toCenter };
+    return { from: fromCenter, to: toCenter, verticalFirst: false };
   };
 
   const [currentTime, setCurrentTime] = useState("");
@@ -217,8 +226,8 @@ export function EnergyFlowDiagram({
         <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${dimensions.h}`} preserveAspectRatio="xMidYMid meet" className="block" style={{ zIndex: 0 }}>
           {/* Grey base lines for all valid connections */}
           {connections.map((conn, i) => {
-            const { from, to } = getConnectionEndpoints(conn.from, conn.to);
-            const path = makePath(from, to);
+            const { from, to, verticalFirst } = getConnectionEndpoints(conn.from, conn.to);
+            const path = makePath(from, to, verticalFirst);
             return (
               <path
                 key={`base-${i}`}
@@ -233,9 +242,9 @@ export function EnergyFlowDiagram({
           })}
           {/* Active paths: from pathDefinitions (PATH in Consumption.csv -> Paths.csv lookup) */}
           {pathDefinitions.map((pd, i) => {
-            const { from, to } = getConnectionEndpoints(pd.from, pd.to);
+            const { from, to, verticalFirst } = getConnectionEndpoints(pd.from, pd.to);
             const color = resolveColor(pd);
-            const path = makePath(from, to);
+            const path = makePath(from, to, verticalFirst);
             return (
               <g key={`active-${pd.path_id}-${pd.from}-${pd.to}-${pd.source}-${i}`}>
                 <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 2px ${color})` }} />
