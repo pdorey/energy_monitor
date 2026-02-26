@@ -21,13 +21,7 @@ interface EnergyFlowDiagramProps {
     description: string;
   }>;
   validConnections?: Array<{ from: string; to: string }>;
-  labels?: Record<string, string | undefined>;
   displayTime?: string;
-  buildingConsumption?: number;
-  solarProduction?: number;
-  buyPrice?: number;
-  exportPrice?: number;
-  tariff?: string;
 }
 
 const flowColors: Record<string, string> = {
@@ -64,11 +58,6 @@ export function EnergyFlowDiagram({
   pathDefinitions = [],
   validConnections,
   displayTime,
-  buildingConsumption,
-  solarProduction,
-  buyPrice,
-  exportPrice,
-  tariff,
 }: EnergyFlowDiagramProps) {
   void activePaths;
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
@@ -78,14 +67,14 @@ export function EnergyFlowDiagram({
   const soc = snapshot?.battery.soc_percent ?? overview?.battery_soc_percent ?? 0;
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ w: 680, h: 320 });
+  const [dimensions, setDimensions] = useState({ w: 520, h: 380 });
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const update = () => {
       const rect = el.getBoundingClientRect();
-      setDimensions({ w: Math.max(200, rect.width), h: Math.max(150, rect.height) });
+      setDimensions({ w: Math.max(280, rect.width), h: Math.max(280, rect.height) });
     };
     update();
     const ro = new ResizeObserver(update);
@@ -93,31 +82,36 @@ export function EnergyFlowDiagram({
     return () => ro.disconnect();
   }, []);
 
-  // Responsive layout: positions as 0..1 normalized, then scaled to dimensions
+  // Grid layout: 3 cols x 3 rows, equal spacing, larger boxes
   const layout = useMemo(() => {
     const W = dimensions.w;
     const H = dimensions.h;
-    const cx = 0.5;
-    const left = 0.18;
-    const right = 0.82;
-    const top = 0.12;
-    const mid = 0.42;
-    const bot = 0.72;
+    const boxW = 110;
+    const boxH = 72;
+    const gap = 24;
+    const cellW = boxW + gap;
+    const cellH = boxH + gap;
+    const cols = 3;
+    const rows = 3;
+    const gridW = cols * cellW - gap;
+    const gridH = rows * cellH - gap;
+    const offsetX = (W - gridW) / 2 + cellW / 2;
+    const offsetY = (H - gridH) / 2 + cellH / 2;
+
+    const cell = (col: number, row: number) => ({
+      x: offsetX + col * cellW,
+      y: offsetY + row * cellH,
+    });
 
     return {
-      building: { x: cx * W, y: top * H },
-      inverter: { x: cx * W, y: mid * H },
-      solar: { x: cx * W, y: bot * H },
-      grid: { x: left * W, y: (top + mid) / 2 * H },
-      gridMeter: { x: left * W, y: mid * H },
-      battery: { x: right * W, y: mid * H },
-      dailyConsumption: { x: (right + 1) / 2 * W, y: (top + mid) / 2 * H },
-      dailySolar: { x: (right + 1) / 2 * W, y: mid * H },
-      marketPrices: { x: (right + 1) / 2 * W, y: (mid + bot) / 2 * H },
-      boxW: Math.min(88, W * 0.14),
-      boxH: Math.min(56, H * 0.16),
-      infoW: Math.min(120, W * 0.18),
-      infoH: Math.min(64, H * 0.18),
+      building: cell(1, 0),
+      grid: cell(0, 1),
+      inverter: cell(1, 1),
+      battery: cell(2, 1),
+      gridMeter: cell(0, 2),
+      solar: cell(1, 2),
+      boxW,
+      boxH,
     };
   }, [dimensions]);
 
@@ -160,42 +154,6 @@ export function EnergyFlowDiagram({
   };
 
   const [currentTime, setCurrentTime] = useState("");
-  const [dailyConsumptionSum, setDailyConsumptionSum] = useState(0);
-  const [dailySolarSum, setDailySolarSum] = useState(0);
-  const lastTimeRef = useRef("");
-  const processedRowsRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (buildingConsumption !== undefined && solarProduction !== undefined && displayTime) {
-      if (displayTime < lastTimeRef.current) {
-        setDailyConsumptionSum(0);
-        setDailySolarSum(0);
-        processedRowsRef.current.clear();
-      }
-      if (!processedRowsRef.current.has(displayTime)) {
-        setDailyConsumptionSum((p) => p + buildingConsumption);
-        setDailySolarSum((p) => p + solarProduction);
-        processedRowsRef.current.add(displayTime);
-      }
-      lastTimeRef.current = displayTime;
-    }
-  }, [buildingConsumption, solarProduction, displayTime]);
-
-  const getTariffColor = (tariffValue: string, isExport: boolean) => {
-    const t = (tariffValue || "").toLowerCase();
-    if (isExport) {
-      if (t.includes("super low")) return "text-red-300";
-      if (t.includes("low")) return "text-orange-300";
-      if (t.includes("mid")) return "text-yellow-300";
-      if (t.includes("peak")) return "text-green-300";
-    } else {
-      if (t.includes("super low")) return "text-green-300";
-      if (t.includes("low")) return "text-yellow-300";
-      if (t.includes("mid")) return "text-orange-300";
-      if (t.includes("peak")) return "text-red-300";
-    }
-    return "text-slate-300";
-  };
 
   useEffect(() => {
     if (displayTime) setCurrentTime(displayTime);
@@ -234,8 +192,8 @@ export function EnergyFlowDiagram({
         <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">Energy Flow</div>
         {currentTime && <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">{currentTime}</div>}
       </div>
-      <div ref={containerRef} className="relative w-full max-w-[680px] min-w-0 mx-auto overflow-hidden" style={{ aspectRatio: "680/320" }}>
-        <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${dimensions.h}`} preserveAspectRatio="xMidYMid meet" className="block">
+      <div ref={containerRef} className="relative w-full max-w-[520px] min-w-0 mx-auto overflow-hidden" style={{ aspectRatio: "520/380", minHeight: "320px" }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${dimensions.h}`} preserveAspectRatio="xMidYMid meet" className="block" style={{ zIndex: 0 }}>
           {/* Grey base lines for all valid connections */}
           {connections.map((conn, i) => {
             const from = getCenter(normalizeNode(conn.from));
@@ -272,97 +230,66 @@ export function EnergyFlowDiagram({
           })}
         </svg>
 
-        {/* Boxes - positioned absolutely over SVG */}
-        <div className="absolute inset-0 pointer-events-none">
+        {/* Boxes - on top of connectors (z-index 1) */}
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
           <div className="absolute pointer-events-auto" style={boxStyle(layout.building.x, layout.building.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-slate-700/80 rounded-lg p-1.5 border-2 border-slate-600 flex flex-col justify-center overflow-hidden">
-              <div className="flex items-center gap-0.5 min-w-0">
-                <span className="text-sm shrink-0">🏢</span>
-                <span className="text-[9px] font-semibold text-slate-300 truncate">BUILDING</span>
+            <div className="h-full bg-slate-700 rounded-lg p-2 border-2 border-slate-600 flex flex-col justify-center overflow-hidden shadow-lg">
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="text-lg shrink-0">🏢</span>
+                <span className="text-xs font-semibold text-slate-300 truncate">BUILDING</span>
               </div>
-              <div className="text-[10px] font-mono text-slate-300 truncate">{loadKw.toFixed(1)}{loadKw !== 0 ? " kW" : ""}</div>
+              <div className="text-sm font-mono text-slate-300 truncate">{loadKw.toFixed(1)}{loadKw !== 0 ? " kW" : ""}</div>
             </div>
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.grid.x, layout.grid.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-blue-900/40 rounded-lg p-1.5 border-2 border-blue-500/50 flex flex-col justify-center overflow-hidden">
-              <div className="flex items-center gap-0.5 min-w-0">
-                <span className="text-sm shrink-0">⚡</span>
-                <span className="text-[9px] font-semibold text-blue-300 truncate">GRID</span>
+            <div className="h-full bg-blue-900/40 rounded-lg p-2 border-2 border-blue-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="text-lg shrink-0">⚡</span>
+                <span className="text-xs font-semibold text-blue-300 truncate">GRID</span>
               </div>
-              <div className={`text-[10px] font-mono truncate ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>{gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)}{gridKw !== 0 ? " kW" : ""}</div>
+              <div className={`text-sm font-mono truncate ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>{gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)}{gridKw !== 0 ? " kW" : ""}</div>
             </div>
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.gridMeter.x, layout.gridMeter.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-red-900/40 rounded-lg p-1.5 border-2 border-red-500/50 flex flex-col justify-center overflow-hidden">
-              <div className="flex items-center gap-0.5 min-w-0">
-                <span className="text-sm shrink-0">📊</span>
-                <span className="text-[9px] font-semibold text-red-300 truncate">METER</span>
+            <div className="h-full bg-red-900/40 rounded-lg p-2 border-2 border-red-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="text-lg shrink-0">📊</span>
+                <span className="text-xs font-semibold text-red-300 truncate">GRID METER</span>
               </div>
-              <div className="text-[10px] font-mono text-red-300 truncate">{Math.abs(gridKw).toFixed(1)}{Math.abs(gridKw) !== 0 ? " kW" : ""}</div>
+              <div className="text-sm font-mono text-red-300 truncate">{Math.abs(gridKw).toFixed(1)}{Math.abs(gridKw) !== 0 ? " kW" : ""}</div>
             </div>
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.inverter.x, layout.inverter.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-slate-700/80 rounded-lg p-1.5 border-2 border-slate-500 flex flex-col justify-center overflow-hidden">
-              <div className="flex items-center gap-0.5 min-w-0">
-                <span className="text-sm shrink-0">🔄</span>
-                <span className="text-[9px] font-semibold text-slate-300 truncate">INV</span>
+            <div className="h-full bg-slate-700 rounded-lg p-2 border-2 border-slate-500 flex flex-col justify-center overflow-hidden shadow-lg">
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="text-lg shrink-0">🔄</span>
+                <span className="text-xs font-semibold text-slate-300 truncate">INVERTER</span>
               </div>
-              <div className="text-[10px] font-mono text-slate-300 truncate">DC↔AC</div>
+              <div className="text-sm font-mono text-slate-300 truncate">DC↔AC</div>
             </div>
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.solar.x, layout.solar.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-amber-900/40 rounded-lg p-1.5 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden">
-              <div className="flex items-center gap-0.5 min-w-0">
-                <span className="text-sm shrink-0">☀️</span>
-                <span className="text-[9px] font-semibold text-amber-300 truncate">SOLAR</span>
+            <div className="h-full bg-amber-900/40 rounded-lg p-2 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="text-lg shrink-0">☀️</span>
+                <span className="text-xs font-semibold text-amber-300 truncate">SOLAR</span>
               </div>
-              <div className="text-[10px] font-mono text-amber-300 truncate">{solarKw.toFixed(1)}{solarKw !== 0 ? " kW" : ""}</div>
+              <div className="text-sm font-mono text-amber-300 truncate">{solarKw.toFixed(1)}{solarKw !== 0 ? " kW" : ""}</div>
             </div>
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.battery.x, layout.battery.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-emerald-900/40 rounded-lg p-1.5 border-2 border-emerald-500/50 flex flex-col justify-center overflow-hidden">
-              <div className="flex items-center gap-0.5 min-w-0">
-                <span className="text-sm shrink-0">🔋</span>
-                <span className="text-[9px] font-semibold text-emerald-300 truncate">BATT</span>
+            <div className="h-full bg-emerald-900/40 rounded-lg p-2 border-2 border-emerald-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="text-lg shrink-0">🔋</span>
+                <span className="text-xs font-semibold text-emerald-300 truncate">BATTERY</span>
               </div>
-              <div className="text-[10px] font-mono text-emerald-300 truncate">{batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)}{batteryKw !== 0 ? " kW" : ""}</div>
-              <div className="text-[9px] text-slate-400 truncate">{soc.toFixed(0)}%</div>
-            </div>
-          </div>
-
-          <div className="absolute pointer-events-auto" style={boxStyle(layout.dailyConsumption.x, layout.dailyConsumption.y, layout.infoW, layout.infoH)}>
-            <div className="h-full bg-slate-700/80 rounded-lg p-1.5 border-2 border-slate-600 flex flex-col justify-center overflow-hidden">
-              <div className="flex items-center gap-0.5 min-w-0">
-                <span className="text-sm shrink-0">📈</span>
-                <span className="text-[9px] font-semibold text-slate-300 truncate">Daily</span>
-              </div>
-              <div className="text-[10px] font-mono text-slate-300 truncate">{dailyConsumptionSum.toFixed(2)} kWh</div>
-            </div>
-          </div>
-
-          <div className="absolute pointer-events-auto" style={boxStyle(layout.dailySolar.x, layout.dailySolar.y, layout.infoW, layout.infoH)}>
-            <div className="h-full bg-amber-900/40 rounded-lg p-1.5 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden">
-              <div className="flex items-center gap-0.5 min-w-0">
-                <span className="text-sm shrink-0">☀️</span>
-                <span className="text-[9px] font-semibold text-amber-300 truncate">Solar</span>
-              </div>
-              <div className="text-[10px] font-mono text-amber-300 truncate">{dailySolarSum.toFixed(2)} kWh</div>
-            </div>
-          </div>
-
-          <div className="absolute pointer-events-auto" style={boxStyle(layout.marketPrices.x, layout.marketPrices.y, layout.infoW, layout.infoH)}>
-            <div className="h-full bg-slate-700/80 rounded-lg p-1.5 border-2 border-slate-600 flex flex-col justify-center overflow-hidden">
-              <div className="flex items-center gap-0.5 min-w-0">
-                <span className="text-sm shrink-0">💰</span>
-                <span className="text-[9px] font-semibold text-slate-300 truncate">Prices</span>
-              </div>
-              <div className={`text-[10px] font-mono truncate ${getTariffColor(tariff || "", false)}`}>Buy: {buyPrice !== undefined ? buyPrice.toFixed(0) : "—"}</div>
-              <div className={`text-[10px] font-mono truncate ${getTariffColor(tariff || "", true)}`}>Exp: {exportPrice !== undefined ? exportPrice.toFixed(0) : "—"}</div>
+              <div className="text-sm font-mono text-emerald-300 truncate">{batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)}{batteryKw !== 0 ? " kW" : ""}</div>
+              <div className="text-xs text-slate-400 truncate">{soc.toFixed(0)}% SOC</div>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { fetchJSON } from "./api/client";
 import { useLiveData } from "./hooks/useLiveData";
 import { EnergyFlowDiagram } from "./components/EnergyFlowDiagram";
@@ -161,11 +161,47 @@ export function App() {
     }
   }, [tab, intradayData.length, loading, fetchIntraday]);
 
-  const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
-  //const gridKw = snapshot?.grid.power_w ? snapshot.grid.power_w / 1000 : overview?.grid_kw ?? 0;
-  //const loadKw = snapshot?.load.power_w ? snapshot.load.power_w / 1000 : overview?.load_kw ?? 0;
-  //const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
   const soc = snapshot?.battery.soc_percent ?? overview?.battery_soc_percent ?? 0;
+
+  // Cumulative daily consumption and solar (from consumption data)
+  const [dailyConsumptionSum, setDailyConsumptionSum] = useState(0);
+  const [dailySolarSum, setDailySolarSum] = useState(0);
+  const lastTimeRef = useRef("");
+  const processedRowsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const bc = consumptionData?.building_consumption;
+    const sp = consumptionData?.solar_production;
+    const dt = consumptionData?.time;
+    if (bc !== undefined && sp !== undefined && dt) {
+      if (dt < lastTimeRef.current) {
+        setDailyConsumptionSum(0);
+        setDailySolarSum(0);
+        processedRowsRef.current.clear();
+      }
+      if (!processedRowsRef.current.has(dt)) {
+        setDailyConsumptionSum((p) => p + bc);
+        setDailySolarSum((p) => p + sp);
+        processedRowsRef.current.add(dt);
+      }
+      lastTimeRef.current = dt;
+    }
+  }, [consumptionData?.building_consumption, consumptionData?.solar_production, consumptionData?.time]);
+
+  const getTariffColor = (tariffValue: string, isExport: boolean) => {
+    const t = (tariffValue || "").toLowerCase();
+    if (isExport) {
+      if (t.includes("super low")) return "text-red-300";
+      if (t.includes("low")) return "text-orange-300";
+      if (t.includes("mid")) return "text-yellow-300";
+      if (t.includes("peak")) return "text-green-300";
+    } else {
+      if (t.includes("super low")) return "text-green-300";
+      if (t.includes("low")) return "text-yellow-300";
+      if (t.includes("mid")) return "text-orange-300";
+      if (t.includes("peak")) return "text-red-300";
+    }
+    return "text-slate-300";
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
@@ -201,8 +237,8 @@ export function App() {
 
         {!loading && tab === "overview" && (
           <div className="space-y-6">
-            {/* Stats row */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            {/* Stats row: Equipment, Uptime, Battery, Daily, Solar, Prices */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Equipment</div>
                 <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold">
@@ -217,15 +253,32 @@ export function App() {
                 </div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-                <div className="text-xs uppercase text-slate-400">Solar</div>
-                <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold text-amber-300">
-                  {solarKw.toFixed(1)} <span className="text-sm">kW</span>
-                </div>
-              </div>
-              <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Battery</div>
                 <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold text-emerald-300">
                   {soc.toFixed(0)} <span className="text-sm">%</span>
+                </div>
+              </div>
+              <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
+                <div className="text-xs uppercase text-slate-400">Daily</div>
+                <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-semibold text-slate-300">
+                  {dailyConsumptionSum.toFixed(2)} <span className="text-sm">kWh</span>
+                </div>
+                <div className="text-sm text-slate-400 mt-1">Consumption</div>
+              </div>
+              <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
+                <div className="text-xs uppercase text-slate-400">Solar</div>
+                <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-semibold text-amber-300">
+                  {dailySolarSum.toFixed(2)} <span className="text-sm">kWh</span>
+                </div>
+                <div className="text-sm text-slate-400 mt-1">Today</div>
+              </div>
+              <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
+                <div className="text-xs uppercase text-slate-400">Prices</div>
+                <div className={`mt-1 sm:mt-2 text-lg sm:text-xl font-semibold ${getTariffColor(consumptionData?.tariff || "", false)}`}>
+                  Buy: {consumptionData?.buy_price !== undefined ? consumptionData.buy_price.toFixed(0) : "—"}
+                </div>
+                <div className={`text-sm ${getTariffColor(consumptionData?.tariff || "", true)}`}>
+                  Exp: {consumptionData?.export_price !== undefined ? consumptionData.export_price.toFixed(0) : "—"} €/MWh
                 </div>
               </div>
             </div>
@@ -244,13 +297,7 @@ export function App() {
               activePaths={consumptionData?.active_paths}
               pathDefinitions={consumptionData?.path_definitions}
               validConnections={consumptionData?.valid_connections}
-              labels={consumptionData?.labels}
               displayTime={consumptionData?.time}
-              buildingConsumption={consumptionData?.building_consumption}
-              solarProduction={consumptionData?.solar_production}
-              buyPrice={consumptionData?.buy_price}
-              exportPrice={consumptionData?.export_price}
-              tariff={consumptionData?.tariff}
             />
           </div>
         )}
