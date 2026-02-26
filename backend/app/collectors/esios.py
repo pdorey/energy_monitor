@@ -1,3 +1,4 @@
+"""ESIOS collector for Iberian day-ahead prices. Fallback when ENTSO-E fails."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -15,10 +16,12 @@ class EsiosCollector:
     BASE_URL = "https://api.esios.ree.es"
 
     def __init__(self, repo=None):
+        """Init with optional Repository; uses get_repository() if None."""
         self.repo = repo or get_repository()
         self.config = get_esios_config()
 
     async def fetch(self) -> Optional[List[dict]]:
+        """Fetch Portugal day-ahead prices (indicator 1001). Returns list of dicts or None."""
         api_key = self.config.get("api_key")
         if not api_key:
             print("[ESIOS] No API key configured")
@@ -47,6 +50,7 @@ class EsiosCollector:
         return self._parse_response(data)
 
     def _parse_response(self, data: dict) -> Optional[List[dict]]:
+        """Parse ESIOS JSON response. Returns list of {timestamp, spot_price_eur_mwh, source} or None."""
         try:
             values = data.get("indicator", {}).get("values", [])
             if not values:
@@ -70,6 +74,7 @@ class EsiosCollector:
             return None
 
     async def run(self) -> bool:
+        """Fetch and persist to energy_prices. Returns True on success."""
         rows = await self.fetch()
         if not rows:
             return False

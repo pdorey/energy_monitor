@@ -25,24 +25,24 @@ interface EquipmentItem {
   metrics: Record<string, number>;
 }
 
-function formatHours(seconds: number): string {
-  const totalMinutes = Math.floor(seconds / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  
-  if (hours >= 24) {
-    const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-    if (remainingHours === 0) {
-      return `${days}d`;
-    }
-    return `${days}d ${remainingHours}h ${minutes}m`;
-  }
-  
-  if (minutes === 0) {
-    return `${hours}h`;
-  }
-  return `${hours}h ${minutes}m`;
+/** Slot name color: green (super_off_peak), blue (off_peak), orange (standard), red (peak). */
+function getSlotColor(slotName: string): string {
+  const s = (slotName || "").toLowerCase().replace(/-/g, "_");
+  if (s === "super_off_peak") return "text-green-400";
+  if (s === "off_peak") return "text-blue-400";
+  if (s === "standard") return "text-orange-400";
+  if (s === "peak") return "text-red-400";
+  return "text-slate-300";
+}
+
+/** Format slot_name for display (e.g. super_off_peak -> Super off-peak). */
+function formatSlotName(slotName: string): string {
+  if (!slotName) return "—";
+  const s = slotName.toLowerCase().replace(/_/g, " ");
+  return s
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 interface ConsumptionData {
@@ -72,11 +72,18 @@ interface ConsumptionData {
   building_consumption?: number;
   solar_production?: number;
   spot_price?: number;
-  buy_price?: number;  // New field
+  buy_price?: number;
   export_price?: number;
   tariff?: string;
+  day_of_week?: string;
+  season?: string;
+  slot_name?: string;
 }
 
+/**
+ * Main application component. Tab navigation: Overview, Energy Flow, Equipment, Analytics.
+ * Uses WebSocket for real-time data and REST for overview/consumption/analytics.
+ */
 export function App() {
   const [tab, setTab] = useState<"overview" | "equipment" | "analytics">("overview");
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -238,7 +245,7 @@ export function App() {
 
         {!loading && tab === "overview" && (
           <div className="space-y-6">
-            {/* Stats row: Equipment, Uptime, Battery, Daily, Solar, Prices */}
+            {/* Stats row: Equipment, Tariff, Battery, Daily, Solar, Prices */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Equipment</div>
@@ -248,9 +255,12 @@ export function App() {
                 <div className="text-sm text-slate-400 mt-1">Online</div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-                <div className="text-xs uppercase text-slate-400">Uptime</div>
-                <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold">
-                  {overview ? formatHours(overview.uptime_seconds) : "0h"}
+                <div className="text-xs uppercase text-slate-400">Tariff</div>
+                <div className="mt-1 sm:mt-2 text-sm sm:text-base font-medium text-slate-300 capitalize">
+                  {consumptionData?.day_of_week ?? "—"} · {consumptionData?.season ?? "—"}
+                </div>
+                <div className={`mt-0.5 text-lg sm:text-xl font-semibold ${getSlotColor(consumptionData?.slot_name ?? "")}`}>
+                  {formatSlotName(consumptionData?.slot_name ?? "")}
                 </div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">

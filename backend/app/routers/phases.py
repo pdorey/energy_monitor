@@ -1,3 +1,4 @@
+"""3-phase metrics API router. L1/L2/L3 for equipment."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
@@ -9,7 +10,7 @@ router = APIRouter(prefix="/api", tags=["phases"])
 
 @router.get("/equipment/{equipment_id}/phases")
 async def get_equipment_phases(request: Request, equipment_id: str, hours: int = 24):
-    """Return 3-phase metrics for equipment (L1, L2, L3 + aggregate)."""
+    """Return 3-phase metrics for equipment (L1, L2, L3 + aggregate). hours: lookback."""
     if use_simulator():
         sim = getattr(request.app.state, "sim", None)
         if sim and getattr(sim, "_last_snapshot", None):

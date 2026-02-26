@@ -1,3 +1,4 @@
+"""Energy Monitor FastAPI application: REST API, WebSocket, static SPA serving."""
 from __future__ import annotations
 
 import asyncio
@@ -17,16 +18,19 @@ from .models import Overview, EquipmentItem, AnalyticsResponse, Snapshot
 from .simulator import Simulator
 from .config import use_simulator, get_retention_days, get_mode
 from .db import get_repository
+from . import grid_tariff
 from .routers import weather, prices, phases, erse_tariffs, usage_profiles
 
 
 def _resolve_root_dir() -> str:
-    """
-    Resolve project root so CSVs can be found both locally and in Docker.
+    """Resolve project root so CSVs can be found both locally and in Docker.
 
     Layouts we support:
     - Local dev:   <repo>/backend/app/main.py  -> ROOT_DIR = <repo>
     - Docker:      /app/app/main.py           -> ROOT_DIR = /app
+
+    Returns:
+        Absolute path to project root (directory containing Consumption.csv).
     """
     here = os.path.dirname(__file__)
     candidates = [
@@ -52,7 +56,11 @@ start_time = datetime.now(timezone.utc)
 
 
 async def collector_loop():
-    """Background loop: run collectors when in live mode, retention daily."""
+    """Background loop: run collectors when in live mode, retention daily.
+
+    Runs retention once per day, Open-Meteo every 6h, prices (ENTSO-E/ESIOS) every 1h.
+    Skips all when mode=simulator.
+    """
     from .collectors import OpenMeteoCollector, fetch_prices_with_fallback
     from .collectors import EntsoeCollector, EsiosCollector
     repo = get_repository()
@@ -95,6 +103,7 @@ async def collector_loop():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Application lifespan: init simulator, start broadcast and collector loops."""
     global sim
     sim = Simulator()
     app.state.sim = sim
@@ -145,6 +154,7 @@ if os.path.isdir(STATIC_DIR):
 
 @app.get("/")
 async def index():
+    """Serve SPA index.html or message if frontend not built."""
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
@@ -153,14 +163,16 @@ async def index():
 
 @app.get("/health")
 async def health():
+    """Health check endpoint. Returns status and timestamp."""
     return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @app.get("/api/debug")
 async def debug_info():
-    """
-    Diagnostic endpoint to check CSV loading and simulator state.
-    Useful for debugging path issues in Docker.
+    """Diagnostic endpoint to check CSV loading and simulator state.
+
+    Returns:
+        Dict with mode, paths, file existence, simulator state and current row sample.
     """
     info = {
         "mode": get_mode(),
@@ -206,6 +218,7 @@ async def debug_info():
 
 @app.get("/api/overview", response_model=Overview)
 async def api_overview():
+    """Return system overview: equipment count, uptime, battery, solar, grid, load."""
     if not sim:
         raise RuntimeError("Simulator not initialized")
     snap = sim.generate_snapshot()
@@ -215,6 +228,7 @@ async def api_overview():
 
 @app.get("/api/equipment", response_model=list[EquipmentItem])
 async def api_equipment():
+    """Return list of equipment with metrics (solar, battery, grid, load, EV, heat pump)."""
     if not sim:
         raise RuntimeError("Simulator not initialized")
     snap = sim.generate_snapshot()
@@ -223,9 +237,11 @@ async def api_equipment():
 
 @app.get("/api/intraday-analytics")
 async def get_intraday_analytics():
-    """
-    Return 24-hour intraday data from Consumption.csv for analytics charts.
-    Returns all rows with cumulative energy values and prices.
+    """Return 24-hour intraday data from Consumption.csv for analytics charts.
+
+    Returns:
+        Dict with data array: time, cumulative_grid_energy, cumulative_solar_energy,
+        cumulative_battery_energy, cumulative_building_load, spot_price, buy_price, export_price.
     """
     try:
         if not sim:
@@ -285,6 +301,12 @@ async def get_intraday_analytics():
 
 @app.get("/api/analytics", response_model=AnalyticsResponse)
 async def api_analytics(hours: int = 24, resolution: int = 60):
+    """Return historical analytics timeseries (solar, battery, grid, load).
+
+    Args:
+        hours: Lookback period in hours.
+        resolution: Downsample resolution in minutes.
+    """
     if not sim:
         raise RuntimeError("Simulator not initialized")
     return sim.build_analytics(hours=hours, resolution_minutes=resolution)
@@ -292,11 +314,10 @@ async def api_analytics(hours: int = 24, resolution: int = 60):
 
 @app.get("/api/consumption-data")
 async def get_consumption_data():
-    """
-    Read consumption and path data from CSV files and return current row data.
+    """Read consumption and path data from CSV, return current row.
 
-    Uses the same time-compressed index as the Simulator by asking the simulator
-    for the current row, so values, paths and timestamps stay in sync.
+    Uses simulator's current row so values, paths and timestamps stay in sync.
+    Returns building_kw, grid_kw, solar_kw, path_definitions, valid_connections, prices.
     """
     try:
         if not sim:
@@ -334,6 +355,29 @@ async def get_consumption_data():
         buy_price = parse_float("BUY PRICE") * 1000  # May not exist in older CSV files, defaults to 0
         export_price = parse_float("EXPORT PRICE") * 1000
         tariff = (row.get("TARIFF") or "").strip()
+
+        # Tariff slot: day_of_week, season, slot_name from grid_tariff (uses simulator time)
+        day_of_week = "weekday"
+        season = "summer"
+        slot_name = "standard"
+        try:
+            sim_dow, hour = sim.get_current_slot_info()  # type: ignore[attr-defined]
+            repo = get_repository()
+            settings = repo.get_site_settings()
+            tariff_type = settings.get("tariff_type", "three_rate")
+            voltage_level = settings.get("voltage_level", "medium_voltage")
+            # Use current real date for season and holidays (simulator has no date)
+            now = datetime.now(timezone.utc)
+            season = grid_tariff.get_season(now)
+            day_of_week = grid_tariff.get_day_of_week(now, repo)
+            # Use simulator's day for weekday/saturday/sunday (not real date)
+            if sim_dow != "weekday":
+                day_of_week = sim_dow
+            slot_name = repo.get_slot_name(
+                tariff_type, voltage_level, season, day_of_week, hour
+            ) or "standard"
+        except Exception:
+            pass
 
         # Active path ID (single PATH column, e.g. a..g)
         active_paths: list[str] = []
@@ -450,9 +494,12 @@ async def get_consumption_data():
             "building_consumption": building_consumption,
             "solar_production": solar_production,
             "spot_price": spot_price,
-            "buy_price": buy_price,  # New field
+            "buy_price": buy_price,
             "export_price": export_price,
             "tariff": tariff,
+            "day_of_week": day_of_week,
+            "season": season,
+            "slot_name": slot_name,
         }
     except Exception as e:
         import traceback
@@ -462,6 +509,7 @@ async def get_consumption_data():
 
 @app.websocket("/ws/live")
 async def ws_live(websocket: WebSocket):
+    """WebSocket for real-time data. Sends snapshot every 2s via broadcast_loop. Accepts ping."""
     await websocket.accept()
     clients.add(websocket)
     try:
@@ -492,6 +540,7 @@ async def ws_live(websocket: WebSocket):
 
 
 async def broadcast_loop():
+    """Every 2s advance simulator and broadcast snapshot to all connected WebSocket clients."""
     while True:
         await asyncio.sleep(2)
         if not sim:
@@ -516,10 +565,9 @@ async def broadcast_loop():
         clients.difference_update(dead)
 
 
-# Catch-all route for SPA routing - must be last
-# This handles static files at root (like vite.svg) and SPA routes
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
+    """Catch-all for SPA: serve static file if exists, else index.html. Excludes api/ and ws/."""
     # Don't interfere with API routes or WebSocket (these are handled by their specific routes)
     if full_path.startswith("api/") or full_path.startswith("ws/"):
         from fastapi import HTTPException

@@ -1,11 +1,17 @@
+/**
+ * WebSocket hook for real-time energy data.
+ * Connects to /ws/live and receives snapshot updates every 2 seconds.
+ */
 import { useEffect, useState } from "react";
 
+/** Solar inverter metrics (power, voltage, current). */
 export interface SolarMetrics {
   power_w: number;
   voltage_v: number;
   current_a: number;
 }
 
+/** Battery metrics (power, SOC, capacity, voltage, temperature). */
 export interface BatteryMetrics {
   power_w: number;
   soc_percent: number;
@@ -14,6 +20,7 @@ export interface BatteryMetrics {
   temperature_c: number;
 }
 
+/** Grid connection metrics (power, voltage, current, frequency). */
 export interface GridMetrics {
   power_w: number;
   voltage_v: number;
@@ -21,12 +28,14 @@ export interface GridMetrics {
   frequency_hz: number;
 }
 
+/** Building load metrics (power, voltage, current). */
 export interface LoadMetrics {
   power_w: number;
   voltage_v: number;
   current_a: number;
 }
 
+/** Full snapshot: solar, battery, grid, load metrics at a timestamp. */
 export interface Snapshot {
   timestamp: string;
   solar: SolarMetrics;
@@ -35,8 +44,14 @@ export interface Snapshot {
   load: LoadMetrics;
 }
 
+/** WebSocket connection status. */
 export type WsStatus = "connecting" | "open" | "closed";
 
+/**
+ * Fetches live data via WebSocket and returns snapshot + status.
+ *
+ * @returns Object with snapshot (or null) and WebSocket status.
+ */
 export function useLiveData() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [status, setStatus] = useState<WsStatus>("connecting");

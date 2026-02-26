@@ -1,3 +1,4 @@
+"""Pydantic models for Snapshot, Overview, EquipmentItem, Analytics, ERSE."""
 from __future__ import annotations
 
 from datetime import datetime

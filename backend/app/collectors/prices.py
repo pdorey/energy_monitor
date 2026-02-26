@@ -1,6 +1,4 @@
-"""
-Price collector: ENTSO-E primary, ESIOS fallback.
-"""
+"""Price fetch: ENTSO-E primary, ESIOS fallback."""
 from __future__ import annotations
 
 import asyncio
@@ -11,7 +9,7 @@ from .esios import EsiosCollector
 
 
 async def fetch_prices_with_fallback(entsoe: EntsoeCollector, esios: EsiosCollector) -> bool:
-    """Try ENTSO-E first; on failure fall back to ESIOS."""
+    """Try ENTSO-E first; on failure fall back to ESIOS. Returns True if either succeeds."""
     rows = await entsoe.fetch()
     if rows:
         entsoe.repo.insert_energy_prices_batch(rows)

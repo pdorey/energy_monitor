@@ -1,3 +1,4 @@
+"""EV charger collector (stub). FusionSolar or OCPP integration."""
 from __future__ import annotations
 
 from typing import Optional
@@ -12,12 +13,15 @@ class EvChargerCollector:
     """
 
     def __init__(self, repo=None):
+        """Init with optional Repository; uses get_repository() if None."""
         self.repo = repo or get_repository()
 
     async def fetch(self) -> Optional[dict]:
+        """Stub: returns None until EV charger API integration."""
         return None
 
     async def run(self) -> bool:
+        """Stub: fetch and persist. Returns False until integration complete."""
         data = await self.fetch()
         if not data:
             return False

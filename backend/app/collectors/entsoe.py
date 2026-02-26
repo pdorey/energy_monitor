@@ -1,3 +1,4 @@
+"""ENTSO-E Transparency Platform collector for day-ahead electricity prices."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -16,10 +17,12 @@ class EntsoeCollector:
     BASE_URL = "https://web-api.tp.entsoe.eu/api"
 
     def __init__(self, repo=None):
+        """Init with optional Repository; uses get_repository() if None."""
         self.repo = repo or get_repository()
         self.config = get_entsoe_config()
 
     async def fetch(self) -> Optional[List[dict]]:
+        """Fetch day-ahead prices. Returns list of {timestamp, spot_price_eur_mwh, source} or None."""
         token = self.config.get("token")
         if not token:
             print("[ENTSO-E] No token configured")
@@ -50,6 +53,7 @@ class EntsoeCollector:
         return self._parse_xml(text)
 
     def _parse_xml(self, xml_text: str) -> Optional[List[dict]]:
+        """Parse IEC 62325-351 XML. Returns list of price dicts or None."""
         try:
             root = ElementTree.fromstring(xml_text)
             ns = {"ns": "urn:iec62325.351:tc57wg16:451-3:publicationdocument:7:0"}
@@ -97,6 +101,7 @@ class EntsoeCollector:
             return None
 
     async def run(self) -> bool:
+        """Fetch and persist to energy_prices. Returns True on success."""
         rows = await self.fetch()
         if not rows:
             return False

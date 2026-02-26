@@ -1,3 +1,4 @@
+"""7-day CSV-driven energy simulator with weekday/weekend profiles and 3-phase metrics."""
 from __future__ import annotations
 
 import csv
@@ -23,6 +24,7 @@ from .models import (
 
 
 def _parse_float(row: dict, field: str) -> float:
+    """Parse float from CSV row field. Returns 0.0 on missing or invalid."""
     val = (row.get(field) or "").strip()
     try:
         return float(val) if val else 0.0
@@ -31,7 +33,14 @@ def _parse_float(row: dict, field: str) -> float:
 
 
 def _synthetic_three_phase(total_power_w: float) -> ThreePhaseMetrics:
-    """Generate balanced 3-phase with small random imbalance."""
+    """Generate balanced 3-phase metrics with small random imbalance.
+
+    Args:
+        total_power_w: Total power to distribute across L1, L2, L3.
+
+    Returns:
+        ThreePhaseMetrics with voltages, currents, powers, frequency, power factor.
+    """
     base = total_power_w / 3.0
     imbalance = 0.08
     l1 = base * (1 + random.uniform(-imbalance, imbalance))
@@ -71,6 +80,7 @@ class Simulator:
     TOTAL_SLOTS = SLOTS_PER_DAY * DAYS
 
     def __init__(self, history_hours: int = 24, step_seconds: int = 900) -> None:
+        """Load Consumption.csv, init slot index and history deques."""
         here = os.path.dirname(__file__)
         candidates = [
             os.path.abspath(os.path.join(here, "..", "..")),
@@ -105,7 +115,7 @@ class Simulator:
             print(f"[Simulator] WARNING: Consumption.csv not found at {consumption_csv}")
 
         self._slot = 0
-        self._last_slot = 0
+        self._last_slot = 0  # slot of last processed row (used by get_current_row)
         self._last_processed_row: Optional[dict] = None
         self._last_snapshot: Optional[Snapshot] = None
         self.battery_soc = 91.0
@@ -126,10 +136,12 @@ class Simulator:
         }
 
     def _is_weekend(self, slot: int) -> bool:
+        """True if slot falls on Saturday or Sunday (day 5 or 6)."""
         day = slot // self.SLOTS_PER_DAY
         return day >= 5  # Saturday=5, Sunday=6
 
     def _get_row_for_slot(self, slot: int) -> Optional[dict]:
+        """Get CSV row for slot (wraps to 96 rows). Returns None if no data."""
         if not self._weekday_rows:
             return None
         csv_idx = slot % self.SLOTS_PER_DAY
@@ -137,9 +149,11 @@ class Simulator:
         return row
 
     def _apply_randomization(self, val: float) -> float:
+        """Apply ±10% random variation to value."""
         return val * (1 + random.uniform(-0.1, 0.1))
 
     def _get_current_row(self) -> Optional[dict]:
+        """Compute current row with weekend scaling, EV, heat pump, randomization."""
         slot = self._slot
         row = self._get_row_for_slot(slot)
         if row is None:
@@ -199,8 +213,20 @@ class Simulator:
             "tariff": (row.get("TARIFF") or "").strip(),
         }
 
+    def get_current_slot_info(self) -> tuple[str, int]:
+        """Return (day_of_week, hour) for current slot. day_of_week: weekday|saturday|sunday."""
+        slot = self._last_slot
+        day = slot // self.SLOTS_PER_DAY
+        csv_idx = slot % self.SLOTS_PER_DAY
+        hour = (csv_idx // 4) % 24
+        if day >= 5:
+            dow = "sunday" if day == 6 else "saturday"
+        else:
+            dow = "weekday"
+        return (dow, hour)
+
     def get_current_row(self) -> Optional[dict]:
-        """Row used for /api/consumption-data - format compatible with CSV columns."""
+        """Row for /api/consumption-data. Format compatible with CSV columns (TIME, PATH, etc)."""
         if self._last_processed_row is None:
             return None
         slot = self._last_slot
@@ -234,9 +260,11 @@ class Simulator:
         }
 
     def get_all_rows(self) -> list[dict]:
+        """Return copy of all weekday CSV rows (96 rows)."""
         return self._weekday_rows.copy() if self._weekday_rows else []
 
     def generate_snapshot(self) -> Snapshot:
+        """Advance slot, compute current row, build Snapshot with solar/battery/grid/load/3-phase."""
         now = datetime.now(timezone.utc)
         self._last_slot = self._slot
         row = self._get_current_row()
@@ -320,6 +348,7 @@ class Simulator:
         return snapshot
 
     def build_overview(self, snapshot: Snapshot, uptime_seconds: int) -> Overview:
+        """Build Overview from snapshot (equipment count, uptime, solar, battery, grid, load)."""
         return Overview(
             timestamp=snapshot.timestamp,
             total_equipment=6,
@@ -333,6 +362,7 @@ class Simulator:
         )
 
     def build_equipment(self, snapshot: Snapshot) -> List[EquipmentItem]:
+        """Build list of EquipmentItem from snapshot (solar, battery, grid, load, EV, heat pump)."""
         ev_pwr = snapshot.ev.get("power_w", 0) if snapshot.ev else 0
         hp_pwr = snapshot.heat_pump.get("power_w", 0) if snapshot.heat_pump else 0
         return [
@@ -410,6 +440,7 @@ class Simulator:
         ]
 
     def build_analytics(self, hours: int, resolution_minutes: int) -> AnalyticsResponse:
+        """Build AnalyticsResponse from history deques, downsampled to resolution_minutes."""
         now = datetime.now(timezone.utc)
         from_ts = now - timedelta(hours=hours)
 

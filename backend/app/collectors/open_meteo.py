@@ -1,3 +1,4 @@
+"""Open-Meteo weather collector. Free API, no key required."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -15,10 +16,12 @@ class OpenMeteoCollector:
     BASE_URL = "https://api.open-meteo.com/v1/forecast"
 
     def __init__(self, repo=None):
+        """Init with optional Repository; uses get_repository() if None."""
         self.repo = repo or get_repository()
         self.config = get_open_meteo_config()
 
     async def fetch(self) -> Optional[List[dict]]:
+        """Fetch 7-day hourly forecast. Returns list of weather dicts or None on failure."""
         params = {
             "latitude": self.config["latitude"],
             "longitude": self.config["longitude"],
@@ -55,6 +58,7 @@ class OpenMeteoCollector:
         return rows
 
     async def run(self) -> bool:
+        """Fetch and persist to weather table. Returns True on success."""
         rows = await self.fetch()
         if not rows:
             return False
@@ -64,6 +68,7 @@ class OpenMeteoCollector:
 
 
 def _v(arr, i):
+    """Safe array index: return arr[i] or None if out of range."""
     if arr is None or i >= len(arr):
         return None
     return arr[i]

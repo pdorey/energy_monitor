@@ -1,3 +1,4 @@
+"""ERSE tariff definitions API. CRUD for grid access tariffs."""
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException

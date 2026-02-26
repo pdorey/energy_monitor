@@ -1,3 +1,4 @@
+"""Weather API router. Forecast from DB."""
 from __future__ import annotations
 
 from fastapi import APIRouter
@@ -8,7 +9,7 @@ router = APIRouter(prefix="/api", tags=["weather"])
 
 @router.get("/weather")
 async def get_weather(days: int = 7):
-    """Return weather forecast from DB."""
+    """Return weather forecast from DB. days: lookback period."""
     repo = get_repository()
     rows = repo.get_weather(days=days)
     return {"data": rows}

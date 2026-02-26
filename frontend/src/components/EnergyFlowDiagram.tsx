@@ -1,6 +1,11 @@
+/**
+ * Energy flow diagram: Grid, Gateway, Inverter, Battery, Solar, Building.
+ * Animated connectors follow path_definitions from consumption-data API.
+ */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { Snapshot } from "../hooks/useLiveData";
 
+/** Props for EnergyFlowDiagram. */
 interface EnergyFlowDiagramProps {
   snapshot: Snapshot | null;
   overview: {
@@ -45,12 +50,14 @@ const DEFAULT_VALID_CONNECTIONS: Array<{ from: string; to: string }> = [
   { from: "inverter", to: "gridMeter" },
 ];
 
+/** Normalize node name for connection matching (e.g. gridmeter -> gridMeter). */
 function normalizeNode(name: string): string {
   const n = name.toLowerCase().replace(/\s+/g, "");
   if (n === "gridmeter" || n === "gateway") return "gridMeter";
   return n;
 }
 
+/** Renders energy flow diagram with animated paths. Uses snapshot or overview for power values. */
 export function EnergyFlowDiagram({
   snapshot,
   overview,

@@ -61,11 +61,7 @@ CREATE TABLE IF NOT EXISTS consumption (
     battery_kw REAL,
     battery_soc REAL,
     ev_kw REAL,
-    heat_pump_kw REAL,
-    spot_price_eur_mwh REAL,
-    buy_price_eur_kwh REAL,
-    export_price_eur_kwh REAL,
-    tariff TEXT
+    heat_pump_kw REAL
 );
 
 CREATE TABLE IF NOT EXISTS usage_profiles (
@@ -81,14 +77,47 @@ CREATE TABLE IF NOT EXISTS usage_profiles (
     UNIQUE(profile_id, day_type, slot_15min)
 );
 
-CREATE TABLE IF NOT EXISTS erse_tariff_definitions (
+-- ERSE tariff parameters: loss_factor, buy_spread, vat_rate, export_multiplier.
+DROP TABLE IF EXISTS erse_tariff_definitions;
+CREATE TABLE erse_tariff_definitions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tariff_type TEXT NOT NULL,  -- simple | two_rate | three_rate
-    valid_from TEXT NOT NULL,  -- ISO date
-    valid_to TEXT NOT NULL,    -- ISO date
-    peak_hours_json TEXT,      -- JSON array of hour ranges e.g. [[9,13],[18,22]]
-    access_charge_peak REAL,
-    access_charge_off_peak REAL,
-    access_charge_super_off_peak REAL,
-    export_multiplier REAL DEFAULT 0.8
+    tariff_type TEXT NOT NULL,       -- simple | two_rate | three_rate | four_rate
+    valid_from TEXT NOT NULL,
+    valid_to TEXT NOT NULL,
+    loss_factor REAL DEFAULT 1.08,
+    buy_spread_eur_kwh REAL DEFAULT 0.005,
+    vat_rate REAL DEFAULT 1.23,     -- 23% VAT (multiply by 1.23)
+    export_multiplier REAL DEFAULT 0.8,
+    UNIQUE(tariff_type, valid_from)
+);
+
+-- Portuguese public holidays. Holidays treated as sunday for tariff day_of_week.
+CREATE TABLE IF NOT EXISTS portuguese_holidays (
+    date TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+-- Grid access (TAR) costs with slot ranges embedded. Source: ERSE_TAR_Complete_2026.xlsx.
+DROP TABLE IF EXISTS grid_tariff_costs;
+CREATE TABLE grid_tariff_costs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tariff_type TEXT NOT NULL,       -- simple | two_rate | three_rate | four_rate
+    voltage_level TEXT NOT NULL,     -- low_voltage | medium_voltage
+    season TEXT NOT NULL,
+    day_of_week TEXT NOT NULL,
+    slot_name TEXT NOT NULL,         -- standard | off_peak | peak | super_off_peak
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    grid_access_eur_kwh REAL NOT NULL,
+    UNIQUE(tariff_type, voltage_level, season, day_of_week, slot_name, start_time, end_time)
+);
+
+-- Removed: grid_tariff_slot_ranges, erse_capacity_tiers
+DROP TABLE IF EXISTS grid_tariff_slot_ranges;
+DROP TABLE IF EXISTS erse_capacity_tiers;
+
+-- Site-level settings for tariff resolution.
+CREATE TABLE IF NOT EXISTS site_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
 );

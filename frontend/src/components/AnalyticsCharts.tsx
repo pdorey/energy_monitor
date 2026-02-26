@@ -1,3 +1,7 @@
+/**
+ * Analytics charts: cumulative energy and price timeseries.
+ * Supports progressive reveal based on currentTime from simulator.
+ */
 import { useState, useEffect } from "react";
 import {
   LineChart,
@@ -10,6 +14,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+/** Single intraday data point from /api/intraday-analytics. */
 interface IntradayDataPoint {
   time: string;
   cumulative_grid_energy: number;
@@ -21,11 +26,13 @@ interface IntradayDataPoint {
   export_price: number;
 }
 
+/** Props for AnalyticsCharts. */
 interface AnalyticsChartsProps {
   data: IntradayDataPoint[];
   currentTime?: string; // Current time from simulator (e.g., "12:30")
 }
 
+/** Renders cumulative energy and price charts. Nullifies future values when currentTime set. */
 export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
   const [chartData, setChartData] = useState<IntradayDataPoint[]>([]);
 

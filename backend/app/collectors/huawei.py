@@ -1,3 +1,4 @@
+"""Huawei FusionSolar collector (stub). Inverter, battery, plant data."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -14,10 +15,12 @@ class HuaweiCollector:
     """
 
     def __init__(self, repo=None):
+        """Init with optional Repository; uses get_repository() if None."""
         self.repo = repo or get_repository()
         self.config = get_huawei_config()
 
     async def fetch(self) -> Optional[dict]:
+        """Stub: returns None until FusionSolarPy or REST integration."""
         if not self.config.get("username") or not self.config.get("password"):
             return None
         # TODO: Integrate FusionSolarPy or direct REST
@@ -27,6 +30,7 @@ class HuaweiCollector:
         return None
 
     async def run(self) -> bool:
+        """Stub: fetch and persist. Returns False until integration complete."""
         data = await self.fetch()
         if not data:
             return False
