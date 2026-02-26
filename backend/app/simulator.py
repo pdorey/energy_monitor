@@ -209,26 +209,28 @@ class Simulator:
         minute = (csv_idx % 4) * 15
         time_str = f"{hour:02d}:{minute:02d}"
         r = self._last_processed_row
+        raw = self._get_row_for_slot(slot)
+        path_val = (raw.get("PATH") or "a").strip() if raw else "a"
         return {
             "TIME": time_str,
-            "PATH": "a",
+            "PATH": path_val,
             "BUILDING LOAD PWR": str(r["building_load_kw"]),
-            "BUILDING LOAD LABEL": "Grid only",
+            "BUILDING LOAD LABEL": (raw.get("BUILDING LOAD LABEL") or "Grid only").strip() if raw else "Grid only",
             "GRID PWR": str(r["grid_kw"]),
-            "GRID LABEL": "Importing",
+            "GRID LABEL": (raw.get("GRID LABEL") or "Importing").strip() if raw else "Importing",
             "BATTERY PWR": str(r["battery_kw"]),
-            "BATTERY LABEL": "Idle",
+            "BATTERY LABEL": (raw.get("BATTERY LABEL") or "Idle").strip() if raw else "Idle",
             "BATTERY SOC": f"{r['battery_soc']:.0f}%",
             "SOLAR PWR": str(r["solar_kw"]),
-            "SOLAR LABEL": "Active" if r["solar_kw"] > 0 else "Inactive",
-            "BUILDING CONSUMPTION": "0",
-            "GRID ENERGY": "0",
-            "SOLAR PRODUCTION": "0",
-            "BATTERY": "0",
+            "SOLAR LABEL": (raw.get("SOLAR LABEL") or ("Active" if r["solar_kw"] > 0 else "Inactive")).strip() if raw else ("Active" if r["solar_kw"] > 0 else "Inactive"),
+            "BUILDING CONSUMPTION": (raw.get("BUILDING CONSUMPTION") or "0").strip() if raw else "0",
+            "GRID ENERGY": (raw.get("GRID ENERGY") or "0").strip() if raw else "0",
+            "SOLAR PRODUCTION": (raw.get("SOLAR PRODUCTION") or "0").strip() if raw else "0",
+            "BATTERY": (raw.get("BATTERY") or "0").strip() if raw else "0",
             "SPOT PRICE": str(r["spot_price"]),
             "TARIFF": r["tariff"],
-            "BUY PRICE": str(r["spot_price"] * 3.2),
-            "EXPORT PRICE": str(r["spot_price"] * 0.8),
+            "BUY PRICE": (raw.get("BUY PRICE") or str(r["spot_price"] * 3.2)).strip() if raw else str(r["spot_price"] * 3.2),
+            "EXPORT PRICE": (raw.get("EXPORT PRICE") or str(r["spot_price"] * 0.8)).strip() if raw else str(r["spot_price"] * 0.8),
         }
 
     def get_all_rows(self) -> list[dict]:
