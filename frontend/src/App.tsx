@@ -4,6 +4,7 @@ import { useLiveData } from "./hooks/useLiveData";
 import { EnergyFlowDiagram } from "./components/EnergyFlowDiagram";
 import { AnalyticsCharts } from "./components/AnalyticsCharts";
 import { PriceChart } from "./components/PriceChart";
+import { SolarForecastChart } from "./components/SolarForecastChart";
 
 interface Overview {
   timestamp: string;
@@ -162,12 +163,20 @@ export function App() {
     };
   }, []);
 
-  // Refetch intraday when switching to analytics tab (in case initial load failed)
+  // Fetch intraday when on overview or analytics (ensures price chart loads without tab switch)
   useEffect(() => {
-    if (tab === "analytics" && intradayData.length === 0 && !loading) {
+    if ((tab === "overview" || tab === "analytics") && intradayData.length === 0 && !loading) {
       fetchIntraday();
     }
   }, [tab, intradayData.length, loading, fetchIntraday]);
+
+  // Retry intraday when consumption data arrives (simulator may not have been ready on initial load)
+  useEffect(() => {
+    if (consumptionData && intradayData.length === 0 && !loading) {
+      const t = setTimeout(fetchIntraday, 500);
+      return () => clearTimeout(t);
+    }
+  }, [consumptionData, intradayData.length, loading, fetchIntraday]);
 
   const soc = snapshot?.battery.soc_percent ?? overview?.battery_soc_percent ?? 0;
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
@@ -296,9 +305,9 @@ export function App() {
               </div>
             </div>
 
-            {/* Energy Flow (left 50%) + Placeholder cards (right 50%) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:grid-rows-1" style={{ minHeight: "400px" }}>
-              <div className="min-h-[320px] lg:min-h-0 flex">
+            {/* Energy Flow (left 3 cols) + Charts (right 3 cols) - same width as 6 cards above */}
+            <div className="grid grid-cols-1 lg:grid-cols-6 gap-4" style={{ minHeight: "400px" }}>
+              <div className="lg:col-span-3 min-h-[320px] lg:min-h-0 flex">
                 <EnergyFlowDiagram
                   snapshot={snapshot}
                   overview={overview ? {
@@ -315,11 +324,9 @@ export function App() {
                   displayTime={consumptionData?.time}
                 />
               </div>
-              <div className="flex flex-col gap-4 min-h-[320px] lg:min-h-0">
+              <div className="lg:col-span-3 flex flex-col gap-4 min-h-[320px] lg:min-h-0">
                 <PriceChart data={intradayData} />
-                <div className="flex-1 min-h-[150px] bg-slate-800/60 rounded-lg border-2 border-dashed border-slate-600 flex items-center justify-center">
-                  <span className="text-slate-500 text-sm">Chart placeholder 2</span>
-                </div>
+                <SolarForecastChart data={intradayData} />
               </div>
             </div>
           </div>

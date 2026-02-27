@@ -63,12 +63,15 @@ export function PriceChart({ data }: PriceChartProps) {
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-4 min-h-[200px] min-w-0 overflow-hidden">
-      <h3 className="text-base font-semibold text-slate-300 mb-3">
+      <h3 className="text-base font-semibold text-slate-300 mb-1">
         Wholesale, Buy & Export Prices (24h)
       </h3>
+      <p className="text-xs text-slate-500 mb-3">
+        Buy Price = Wholesale + ERSE access charges
+      </p>
       <div className="w-full h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
+          <ComposedChart data={data} margin={{ top: 5, right: 50, left: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
             <XAxis
               dataKey="time"
@@ -77,18 +80,27 @@ export function PriceChart({ data }: PriceChartProps) {
               domain={["dataMin", "dataMax"]}
             />
             <YAxis
+              yAxisId="left"
               stroke="#94a3b8"
               tick={{ fill: "#94a3b8", fontSize: 10 }}
-              label={{ value: "€/MWh", angle: -90, position: "insideLeft", fill: "#94a3b8" }}
+              label={{ value: "€/MWh (spot, export)", angle: -90, position: "insideLeft", fill: "#94a3b8" }}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke="#3b82f6"
+              tick={{ fill: "#3b82f6", fontSize: 10 }}
+              label={{ value: "€/MWh (buy)", angle: 90, position: "insideRight", fill: "#3b82f6" }}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ color: "#94a3b8" }} iconType="line" />
-            <Bar dataKey="spot_price" name="Wholesale (spot)" fill="#64748b" radius={[2, 2, 0, 0]}>
+            <Bar dataKey="spot_price" name="Wholesale (spot)" fill="#64748b" radius={[2, 2, 0, 0]} yAxisId="left">
               {data.map((entry, index) => (
                 <Cell key={index} fill={getSlotBarColor(entry.slot_name || "")} />
               ))}
             </Bar>
             <Line
+              yAxisId="right"
               type="monotone"
               dataKey="buy_price"
               name="Buy price"
@@ -98,6 +110,7 @@ export function PriceChart({ data }: PriceChartProps) {
               connectNulls={false}
             />
             <Line
+              yAxisId="left"
               type="monotone"
               dataKey="export_price"
               name="Export price"
