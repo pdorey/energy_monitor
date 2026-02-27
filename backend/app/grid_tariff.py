@@ -92,15 +92,17 @@ def get_grid_access(
     season: str,
     day_of_week: str,
     hour: int,
+    minute: int = 0,
     repo=None,
 ) -> float:
-    """Return grid_access_eur_kwh for (tariff_type, voltage_level, season, day_of_week, hour).
+    """Return grid_access_eur_kwh for (tariff_type, voltage_level, season, day_of_week, time).
 
-    Looks up grid_tariff_costs where hour falls in [start_time, end_time).
+    Looks up grid_tariff_costs where (hour, minute) falls in [start_time, end_time).
+    Uses minute-level resolution for four_rate slots (e.g. 10:30 boundaries).
     Falls back to DEFAULT_GRID_ACCESS_EUR_KWH if not found.
     """
     repo = repo or get_repository()
-    cost = repo.get_grid_access(tariff_type, voltage_level, season, day_of_week, hour)
+    cost = repo.get_grid_access(tariff_type, voltage_level, season, day_of_week, hour, minute)
     return cost if cost is not None else DEFAULT_GRID_ACCESS_EUR_KWH
 
 
@@ -130,9 +132,10 @@ def compute_buy_price(
     season = get_season(timestamp)
     day_of_week = get_day_of_week(timestamp, repo)
     hour = timestamp.hour
+    minute = timestamp.minute
 
     grid_access = get_grid_access(
-        tariff_type, voltage_level, season, day_of_week, hour, repo
+        tariff_type, voltage_level, season, day_of_week, hour, minute, repo
     )
     loss_factor = repo.get_loss_factor(tariff_type, timestamp)
     buy_spread = repo.get_buy_spread(tariff_type, timestamp)

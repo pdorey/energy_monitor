@@ -417,12 +417,11 @@ class Repository:
             return 1440
         return h * 60 + m
 
-    def _hour_in_range(self, hour: int, start_min: int, end_min: int) -> bool:
-        """Check if hour falls in [start_min, end_min). Handles wrap-around."""
-        hour_min = hour * 60
+    def _minutes_in_range(self, minutes_since_midnight: int, start_min: int, end_min: int) -> bool:
+        """Check if minutes_since_midnight falls in [start_min, end_min). Handles wrap-around."""
         if start_min <= end_min:
-            return start_min <= hour_min < end_min
-        return hour_min >= start_min or hour_min < end_min
+            return start_min <= minutes_since_midnight < end_min
+        return minutes_since_midnight >= start_min or minutes_since_midnight < end_min
 
     def get_grid_access(
         self,
@@ -431,11 +430,14 @@ class Repository:
         season: str,
         day_of_week: str,
         hour: int,
+        minute: int = 0,
     ) -> Optional[float]:
-        """Return grid_access_eur_kwh for (tariff_type, voltage_level, season, day_of_week, hour).
+        """Return grid_access_eur_kwh for (tariff_type, voltage_level, season, day_of_week, time).
 
-        Finds row in grid_tariff_costs where hour falls in [start_time, end_time).
+        Finds row in grid_tariff_costs where (hour, minute) falls in [start_time, end_time).
+        Uses minute-level resolution for four_rate slots (e.g. 10:30 boundaries).
         """
+        minutes_since_midnight = hour * 60 + minute
         with _connection(self.db_path) as conn:
             cur = conn.execute(
                 """SELECT start_time, end_time, grid_access_eur_kwh FROM grid_tariff_costs
@@ -445,7 +447,7 @@ class Repository:
             for row in cur.fetchall():
                 start_min = self._parse_time_minutes(row["start_time"])
                 end_min = self._parse_time_minutes(row["end_time"])
-                if self._hour_in_range(hour, start_min, end_min):
+                if self._minutes_in_range(minutes_since_midnight, start_min, end_min):
                     return float(row["grid_access_eur_kwh"])
         return None
 
@@ -456,11 +458,14 @@ class Repository:
         season: str,
         day_of_week: str,
         hour: int,
+        minute: int = 0,
     ) -> Optional[str]:
-        """Return slot_name for (tariff_type, voltage_level, season, day_of_week, hour).
+        """Return slot_name for (tariff_type, voltage_level, season, day_of_week, time).
 
-        Finds row in grid_tariff_costs where hour falls in [start_time, end_time).
+        Finds row in grid_tariff_costs where (hour, minute) falls in [start_time, end_time).
+        Uses minute-level resolution for four_rate slots (e.g. 10:30 boundaries).
         """
+        minutes_since_midnight = hour * 60 + minute
         with _connection(self.db_path) as conn:
             cur = conn.execute(
                 """SELECT start_time, end_time, slot_name FROM grid_tariff_costs
@@ -470,7 +475,7 @@ class Repository:
             for row in cur.fetchall():
                 start_min = self._parse_time_minutes(row["start_time"])
                 end_min = self._parse_time_minutes(row["end_time"])
-                if self._hour_in_range(hour, start_min, end_min):
+                if self._minutes_in_range(minutes_since_midnight, start_min, end_min):
                     return str(row["slot_name"])
         return None
 

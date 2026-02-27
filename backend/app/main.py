@@ -302,12 +302,13 @@ async def get_intraday_analytics():
             slot_name = "standard"
             try:
                 hour = i // 4  # 15-min slot index -> hour (0-23)
-                ts = datetime.combine(today, time(hour, (i % 4) * 15, 0), tzinfo=timezone.utc)
+                minute = (i % 4) * 15
+                ts = datetime.combine(today, time(hour, minute, 0), tzinfo=timezone.utc)
                 season = grid_tariff.get_season(ts)
                 day_of_week = grid_tariff.get_day_of_week(ts, repo)
                 slot_name = repo.get_slot_name(
                     tariff_type, settings.get("voltage_level", "medium_voltage"),
-                    season, day_of_week, hour
+                    season, day_of_week, hour, minute
                 ) or "standard"
                 buy_eur_kwh, export_eur_kwh = compute_buy_export_prices(
                     spot_price, ts, tariff_type, repo=repo, site_settings=settings
@@ -397,7 +398,7 @@ async def get_consumption_data():
         buy_price_eur_kwh = 0.0
         export_price_eur_kwh = 0.0
         try:
-            sim_dow, hour = sim.get_current_slot_info()  # type: ignore[attr-defined]
+            sim_dow, hour, minute = sim.get_current_slot_info()  # type: ignore[attr-defined]
             repo = get_repository()
             settings = repo.get_site_settings()
             tariff_type = settings.get("tariff_type", "three_rate")
@@ -412,7 +413,7 @@ async def get_consumption_data():
             season = grid_tariff.get_season(ts)
             day_of_week = sim_dow
             slot_name = repo.get_slot_name(
-                tariff_type, voltage_level, season, day_of_week, hour
+                tariff_type, voltage_level, season, day_of_week, hour, minute
             ) or "standard"
             # Apply formula: buy = ((spot/1000)*loss_factor + buy_spread + grid_access)*vat_rate; export = spot/1000 * export_multiplier
             buy_price_eur_kwh, export_price_eur_kwh = compute_buy_export_prices(

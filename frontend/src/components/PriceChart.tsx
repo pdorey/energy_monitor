@@ -71,7 +71,7 @@ export function PriceChart({ data }: PriceChartProps) {
       </p>
       <div className="w-full h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 5, right: 50, left: 5, bottom: 5 }}>
+          <ComposedChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
             <XAxis
               dataKey="time"
@@ -80,27 +80,18 @@ export function PriceChart({ data }: PriceChartProps) {
               domain={["dataMin", "dataMax"]}
             />
             <YAxis
-              yAxisId="left"
               stroke="#94a3b8"
               tick={{ fill: "#94a3b8", fontSize: 10 }}
-              label={{ value: "€/MWh (spot, export)", angle: -90, position: "insideLeft", fill: "#94a3b8" }}
-            />
-            <YAxis
-              yAxisId="right"
-              orientation="right"
-              stroke="#3b82f6"
-              tick={{ fill: "#3b82f6", fontSize: 10 }}
-              label={{ value: "€/MWh (buy)", angle: 90, position: "insideRight", fill: "#3b82f6" }}
+              label={{ value: "€/MWh", angle: -90, position: "insideLeft", fill: "#94a3b8" }}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ color: "#94a3b8" }} iconType="line" />
-            <Bar dataKey="spot_price" name="Wholesale (spot)" fill="#64748b" radius={[2, 2, 0, 0]} yAxisId="left">
+            <Bar dataKey="spot_price" name="Wholesale (spot)" fill="#64748b" radius={[2, 2, 0, 0]}>
               {data.map((entry, index) => (
                 <Cell key={index} fill={getSlotBarColor(entry.slot_name || "")} />
               ))}
             </Bar>
             <Line
-              yAxisId="right"
               type="monotone"
               dataKey="buy_price"
               name="Buy price"
@@ -110,7 +101,6 @@ export function PriceChart({ data }: PriceChartProps) {
               connectNulls={false}
             />
             <Line
-              yAxisId="left"
               type="monotone"
               dataKey="export_price"
               name="Export price"

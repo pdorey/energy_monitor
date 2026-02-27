@@ -224,12 +224,12 @@ export function EnergyFlowDiagram({
   });
 
   return (
-    <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 flex flex-col h-full min-h-0">
+    <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 flex flex-col h-full min-h-0 w-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4 shrink-0">
         <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">Energy Flow</div>
         {currentTime && <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">{currentTime}</div>}
       </div>
-      <div className="flex-1 flex items-center justify-center min-h-0">
+      <div className="flex-1 flex items-center justify-center min-h-0 min-w-0">
         <div ref={containerRef} className="relative w-full max-w-full min-w-0 overflow-hidden" style={{ aspectRatio: "4/3", minHeight: "280px" }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${dimensions.h}`} preserveAspectRatio="xMidYMid meet" className="block" style={{ zIndex: 0 }}>
           {/* Grey base lines for all valid connections */}

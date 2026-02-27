@@ -307,7 +307,7 @@ export function App() {
 
             {/* Energy Flow (left 3 cols) + Charts (right 3 cols) - same width as 6 cards above */}
             <div className="grid grid-cols-1 lg:grid-cols-6 gap-4" style={{ minHeight: "400px" }}>
-              <div className="lg:col-span-3 min-h-[320px] lg:min-h-0 flex">
+              <div className="lg:col-span-3 min-h-[320px] lg:min-h-0 flex w-full min-w-0">
                 <EnergyFlowDiagram
                   snapshot={snapshot}
                   overview={overview ? {

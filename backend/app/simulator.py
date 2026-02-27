@@ -224,17 +224,18 @@ class Simulator:
             "tariff": (row.get("TARIFF") or "").strip(),
         }
 
-    def get_current_slot_info(self) -> tuple[str, int]:
-        """Return (day_of_week, hour) for current slot. day_of_week: weekday|saturday|sunday."""
+    def get_current_slot_info(self) -> tuple[str, int, int]:
+        """Return (day_of_week, hour, minute) for current slot. day_of_week: weekday|saturday|sunday."""
         slot = self._last_slot
         day = slot // self.SLOTS_PER_DAY
         csv_idx = slot % self.SLOTS_PER_DAY
         hour = (csv_idx // 4) % 24
+        minute = (csv_idx % 4) * 15
         if day >= 5:
             dow = "sunday" if day == 6 else "saturday"
         else:
             dow = "weekday"
-        return (dow, hour)
+        return (dow, hour, minute)
 
     def get_current_row(self) -> Optional[dict]:
         """Row for /api/consumption-data. Format compatible with CSV columns (TIME, PATH, etc)."""
