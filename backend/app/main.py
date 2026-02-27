@@ -6,7 +6,7 @@ import csv
 import json
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Set
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
@@ -19,6 +19,7 @@ from .simulator import Simulator
 from .config import use_simulator, get_retention_days, get_mode
 from .db import get_repository
 from . import grid_tariff
+from .transformers.prices import compute_buy_export_prices
 from .routers import weather, prices, phases, erse_tariffs, usage_profiles
 
 
@@ -263,7 +264,13 @@ async def get_intraday_analytics():
         cumulative_battery = 0.0
         cumulative_building = 0.0
         
-        for row in rows:
+        repo = get_repository()
+        settings = repo.get_site_settings()
+        tariff_type = settings.get("tariff_type", "three_rate")
+        now = datetime.now(timezone.utc)
+        today = now.date()
+
+        for i, row in enumerate(rows):
             time_value = (row.get("TIME") or "").strip()
             
             # Cumulative energy values
@@ -277,10 +284,20 @@ async def get_intraday_analytics():
             cumulative_battery += battery_energy
             cumulative_building += building_consumption
             
-            # Prices
+            # Prices: apply grid tariff formula from spot price
             spot_price = parse_float("SPOT PRICE", row) * 1000
-            buy_price = parse_float("BUY PRICE", row) * 1000  # May not exist in older CSV files
-            export_price = parse_float("EXPORT PRICE", row) * 1000
+            buy_price = 0.0
+            export_price = 0.0
+            try:
+                hour = i // 4  # 15-min slot index -> hour (0-23)
+                ts = datetime.combine(today, time(hour, (i % 4) * 15, 0), tzinfo=timezone.utc)
+                buy_eur_kwh, export_eur_kwh = compute_buy_export_prices(
+                    spot_price, ts, tariff_type, repo=repo, site_settings=settings
+                )
+                buy_price = buy_eur_kwh * 1000
+                export_price = export_eur_kwh * 1000
+            except Exception:
+                pass
             
             data.append({
                 "time": time_value,
@@ -351,33 +368,43 @@ async def get_consumption_data():
         # Additional fields for new boxes
         building_consumption = parse_float("BUILDING CONSUMPTION")
         solar_production = parse_float("SOLAR PRODUCTION")
-        spot_price = parse_float("SPOT PRICE") * 1000
-        buy_price = parse_float("BUY PRICE") * 1000  # May not exist in older CSV files, defaults to 0
-        export_price = parse_float("EXPORT PRICE") * 1000
+        spot_price_eur_mwh = parse_float("SPOT PRICE") * 1000
         tariff = (row.get("TARIFF") or "").strip()
 
-        # Tariff slot: day_of_week, season, slot_name from grid_tariff (uses simulator time)
+        # Tariff slot and prices: day_of_week, season, slot_name, buy_price, export_price from grid_tariff formula
         day_of_week = "weekday"
         season = "summer"
         slot_name = "standard"
+        buy_price_eur_kwh = 0.0
+        export_price_eur_kwh = 0.0
         try:
             sim_dow, hour = sim.get_current_slot_info()  # type: ignore[attr-defined]
             repo = get_repository()
             settings = repo.get_site_settings()
             tariff_type = settings.get("tariff_type", "three_rate")
             voltage_level = settings.get("voltage_level", "medium_voltage")
-            # Use current real date for season and holidays (simulator has no date)
+            # Build timestamp for tariff: real date (season) + simulator day_of_week + hour
             now = datetime.now(timezone.utc)
-            season = grid_tariff.get_season(now)
-            day_of_week = grid_tariff.get_day_of_week(now, repo)
-            # Use simulator's day for weekday/saturday/sunday (not real date)
-            if sim_dow != "weekday":
-                day_of_week = sim_dow
+            today = now.date()
+            target_wd = {"weekday": 0, "saturday": 5, "sunday": 6}[sim_dow]
+            days_back = (today.weekday() - target_wd) % 7
+            sim_date = today - timedelta(days=days_back)
+            ts = datetime.combine(sim_date, time(hour, 0, 0), tzinfo=timezone.utc)
+            season = grid_tariff.get_season(ts)
+            day_of_week = sim_dow
             slot_name = repo.get_slot_name(
                 tariff_type, voltage_level, season, day_of_week, hour
             ) or "standard"
+            # Apply formula: buy = ((spot/1000)*loss_factor + buy_spread + grid_access)*vat_rate; export = spot/1000 * export_multiplier
+            buy_price_eur_kwh, export_price_eur_kwh = compute_buy_export_prices(
+                spot_price_eur_mwh, ts, tariff_type, repo=repo, site_settings=settings
+            )
         except Exception:
             pass
+        # API returns prices in €/MWh for display
+        spot_price = spot_price_eur_mwh
+        buy_price = buy_price_eur_kwh * 1000
+        export_price = export_price_eur_kwh * 1000
 
         # Active path ID (single PATH column, e.g. a..g)
         active_paths: list[str] = []

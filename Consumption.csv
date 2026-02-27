@@ -1,98 +1,98 @@
-﻿TIME,PATH,BUILDING LOAD PWR,BUILDING LOAD LABEL,GRID PWR,GRID LABEL,BATTERY PWR,BATTERY LABEL,BATTERY SOC,SOLAR PWR,SOLAR LABEL,BUILDING CONSUMPTION,GRID ENERGY,SOLAR PRODUCTION,BATTERY,SPOT PRICE,TARIFF,BUY PRICE,EXPORT PRICE
-00:00,a,7.605,Battery only,7.605,Importing,0,Idle,23%,0.00,Inactive,1.90,1.90,0.00,0.00,0.048,Low,0.153,0.0374
-00:15,a,7.71,Battery only,7.710,Importing,0,Idle,23%,0.00,Inactive,1.93,1.93,0.00,0.00,0.048,Low,0.179,0.0374
-00:30,a,7.065,Battery only,7.065,Importing,0,Idle,23%,0.00,Inactive,1.77,1.77,0.00,0.00,0.047,Low,0.178,0.0366
-00:45,a,8.235,Battery only,8.235,Importing,0,Idle,23%,0.00,Inactive,2.06,2.06,0.00,0.00,0.047,Low,0.178,0.0366
-01:00,a,7.17,Battery only,7.170,Importing,0,Idle,23%,0.00,Inactive,1.79,1.79,0.00,0.00,0.046,Low,0.176,0.0358
-01:15,a,7.47,Grid only,7.470,Importing,0,Idle,23%,0.00,Inactive,1.87,1.87,0.00,0.00,0.046,Low,0.176,0.0358
-01:30,a,7.875,Grid only,7.875,Importing,0,Idle,23%,0.00,Inactive,1.97,1.97,0.00,0.00,0.045,Low,0.175,0.035
-01:45,a,7.335,Grid only,7.335,Importing,0,Idle,23%,0.00,Inactive,1.83,1.83,0.00,0.00,0.045,Low,0.175,0.035
-02:00,a,7.395,Grid only,7.395,Importing,0,Idle,23%,0.00,Inactive,1.85,1.85,0.00,0.00,0.044,Low,0.173,0.0342
-02:15,a,7.44,Grid only,7.440,Importing,0,Idle,23%,0.00,Inactive,1.86,1.86,0.00,0.00,0.044,Low,0.173,0.0342
-02:30,c,7.89,Grid only,20.040,Importing,12.15,Charging,29%,0.00,Inactive,1.97,5.01,0.00,0.00,0.043,Super Low,0.172,0.0334
-02:45,c,8.43,Grid only,26.930,Importing,18.5,Charging,38%,0.00,Inactive,2.11,6.73,0.00,0.00,0.043,Super Low,0.172,0.0334
-03:00,c,7.74,Grid only,29.810,Importing,22.07,Charging,49%,0.00,Inactive,1.94,7.45,0.00,0.00,0.042,Super Low,0.171,0.0326
-03:15,c,7.38,Grid only,19.920,Importing,12.54,Charging,56%,0.00,Inactive,1.85,4.98,0.00,0.00,0.042,Super Low,0.171,0.0326
-03:30,c,7.89,Grid only,21.130,Importing,13.24,Charging,62%,0.00,Inactive,1.97,5.28,0.00,0.00,0.041,Super Low,0.169,0.0318
-03:45,c,7.545,Grid only,23.195,Importing,15.65,Charging,70%,0.00,Inactive,1.89,5.80,0.00,0.00,0.041,Super Low,0.169,0.0318
-04:00,c,7.725,Grid only,29.435,Importing,21.71,Charging,81%,0.00,Inactive,1.93,7.36,0.00,0.00,0.04,Super Low,0.168,0.031
-04:15,c,8.595,Grid only,24.965,Importing,16.37,Charging,89%,0.00,Inactive,2.15,6.24,0.00,0.00,0.04,Super Low,0.168,0.031
-04:30,c,8.43,Grid only,20.570,Importing,12.14,Charging,95%,0.00,Inactive,2.11,5.14,0.00,0.00,0.039,Super Low,0.166,0.0302
-04:45,a,9.18,Grid only,9.180,Importing,0,Idle,95%,0.00,Inactive,2.30,2.30,0.00,0.00,0.039,Super Low,0.166,0.0302
-05:00,a,9.315,Grid only,9.315,Importing,0,Idle,95%,0.00,Inactive,2.33,2.33,0.00,0.00,0.04,Low,0.168,0.031
-05:15,d,12,Grid + solar,11.786,Importing,0,Idle,95%,0.21,Active,3.00,2.95,0.05,0.00,0.041,Low,0.169,0.0318
-05:30,d,14.64,Grid + solar,14.319,Importing,0,Idle,95%,0.32,Active,3.66,3.58,0.08,0.00,0.042,Low,0.171,0.0326
-05:45,d,16.23,Grid + solar,15.694,Importing,0,Idle,95%,0.54,Active,4.06,3.92,0.13,0.00,0.043,Low,0.172,0.0334
-06:00,d,19.05,Grid + solar,18.193,Importing,0,Idle,95%,0.86,Active,4.76,4.55,0.21,0.00,0.045,Low,0.175,0.035
-06:15,d,23.235,Grid + solar,20.985,Importing,0,Idle,95%,2.25,Active,5.81,5.25,0.56,0.00,0.047,Low,0.178,0.0366
-06:30,d,26.895,Grid + solar,23.145,Importing,0,Idle,95%,3.75,Active,6.72,5.79,0.94,0.00,0.049,Low,0.181,0.0382
-06:45,d,30.225,Grid + solar,24.975,Importing,0,Idle,95%,5.25,Active,7.56,6.24,1.31,0.00,0.051,Mid,0.183,0.0398
-07:00,d,33.84,Grid + solar,26.447,Importing,0,Idle,95%,7.39,Active,8.46,6.61,1.85,0.00,0.054,Mid,0.188,0.0422
-07:15,d,39.765,Grid + solar,30.444,Importing,0,Idle,95%,9.32,Active,9.94,7.61,2.33,0.00,0.056,Mid,0.191,0.0438
-07:30,d,43.68,Grid + solar,31.680,Importing,0,Idle,95%,12.00,Active,10.92,7.92,3.00,0.00,0.058,Mid,0.193,0.0454
-07:45,d,52.605,Grid + solar,35.998,Importing,0,Idle,95%,16.61,Active,13.15,9.00,4.15,0.00,0.06,Mid,0.196,0.047
-08:00,d,47.325,Grid + solar,29.218,Importing,0,Idle,95%,18.11,Active,11.83,7.30,4.53,0.00,0.062,Mid,0.199,0.0486
-08:15,d,55.44,Grid + solar,33.261,Importing,0,Idle,95%,22.18,Active,13.86,8.32,5.54,0.00,0.064,Mid,0.202,0.0502
-08:30,g,58.8,Battery + solar,0.000,Importing,-33.83571429,Discharging,78%,24.96,Active,14.70,0.00,6.24,8.46,0.066,Peak,0.205,0.0518
-08:45,g,64.005,Battery + solar,0.000,Importing,-32.39785714,Discharging,62%,31.61,Active,16.00,0.00,7.90,8.10,0.068,Peak,0.208,0.0534
-09:00,g,64.74,Battery + solar,0.000,Importing,-30.02571429,Discharging,47%,34.71,Active,16.19,0.00,8.68,7.51,0.07,Peak,0.211,0.055
-09:15,g,62.655,Battery + solar,0.000,Importing,-24.405,Discharging,35%,38.25,Active,15.66,0.00,9.56,6.10,0.068,Peak,0.208,0.0534
-09:30,g,66.225,Battery + solar,0.000,Importing,-24.86785714,Discharging,22%,41.36,Active,16.56,0.00,10.34,6.22,0.066,Peak,0.205,0.0518
-09:45,d,69.075,Grid + solar,21.718,Importing,0,Idle,22%,47.36,Active,17.27,5.43,11.84,0.00,0.062,Mid,0.199,0.0486
-10:00,d,68.115,Grid + solar,14.651,Importing,0,Idle,22%,53.46,Active,17.03,3.66,13.37,0.00,0.058,Mid,0.193,0.0454
-10:15,d,71.82,Grid + solar,20.391,Importing,0,Idle,22%,51.43,Active,17.96,5.10,12.86,0.00,0.054,Mid,0.188,0.0422
-10:30,d,65.1,Grid + solar,1.136,Importing,0,Idle,22%,63.96,Active,16.28,0.28,15.99,0.00,0.05,Mid,0.182,0.039
-10:45,d,75.975,Grid + solar,6.975,Importing,0,Idle,22%,69.00,Active,18.99,1.74,17.25,0.00,0.046,Low,0.176,0.0358
-11:00,d,75.96,Grid + solar,15.531,Importing,0,Idle,22%,60.43,Active,18.99,3.88,15.11,0.00,0.042,Low,0.171,0.0326
-11:15,f,70.785,Solar only,-0.119,Exporting,5.06,Charging,25%,75.96,Active,17.70,-0.03,18.99,0.00,0.038,Super Low,0.165,0.0294
-11:30,f,73.5,Solar only,-1.380,Exporting,9.87,Charging,30%,84.75,Active,18.38,-0.35,21.19,0.00,0.034,Super Low,0.159,0.0262
-11:45,f,71.88,Solar only,-0.899,Exporting,11.65,Charging,36%,84.43,Active,17.97,-0.22,21.11,0.00,0.03,Super Low,0.154,0.023
-12:00,f,69.36,Solar only,-0.730,Exporting,21.41,Charging,46%,91.50,Active,17.34,-0.18,22.88,0.00,0.028,Super Low,0.151,0.0214
-12:15,f,71.655,Solar only,-0.771,Exporting,20.36,Charging,52%,92.79,Active,17.91,-0.19,23.20,0.00,0.026,Super Low,0.148,0.0198
-12:30,f,73.905,Solar only,-0.874,Exporting,9.65,Charging,54%,84.43,Active,18.48,-0.22,21.11,0.00,0.024,Super Low,0.145,0.0182
-12:45,f,69.63,Solar only,-1.300,Exporting,12.32,Charging,57%,83.25,Active,17.41,-0.33,20.81,0.00,0.026,Super Low,0.148,0.0198
-13:00,f,69.315,Solar only,-2.136,Exporting,19.62,Charging,62%,91.07,Active,17.33,-0.53,22.77,0.00,0.028,Super Low,0.151,0.0214
-13:15,f,69.465,Solar only,-1.781,Exporting,18.54,Charging,67%,89.79,Active,17.37,-0.45,22.45,0.00,0.03,Super Low,0.154,0.023
-13:30,f,70.185,Solar only,-0.661,Exporting,10.69,Charging,69%,81.54,Active,17.55,-0.17,20.38,0.00,0.032,Super Low,0.156,0.0246
-13:45,f,71.79,Solar only,-3.846,Exporting,9.65,Charging,72%,85.29,Active,17.95,-0.96,21.32,0.00,0.034,Super Low,0.159,0.0262
-14:00,f,65.895,Solar only,-1.365,Exporting,18.24,Charging,76%,85.50,Active,16.47,-0.34,21.38,0.00,0.036,Super Low,0.162,0.0278
-14:15,f,68.28,Solar only,-2.450,Exporting,11.02,Charging,79%,81.75,Active,17.07,-0.61,20.44,0.00,0.038,Super Low,0.165,0.0294
-14:30,f,66.795,Solar only,-1.995,Exporting,10.71,Charging,82%,79.50,Active,16.70,-0.50,19.88,0.00,0.04,Low,0.168,0.031
-14:45,f,60.66,Solar only,-0.514,Exporting,6.54,Charging,83%,67.71,Active,15.17,-0.13,16.93,0.00,0.042,Low,0.171,0.0326
-15:00,f,63.765,Grid + solar,-0.521,Exporting,0,Idle,83%,64.29,Active,15.94,-0.13,16.07,0.00,0.044,Low,0.173,0.0342
-15:15,d,63.48,Grid + solar,1.873,Importing,0,Idle,83%,61.61,Active,15.87,0.47,15.40,0.00,0.046,Low,0.176,0.0358
-15:30,d,62.67,Grid + solar,1.599,Importing,0,Idle,83%,61.07,Active,15.67,0.40,15.27,0.00,0.048,Low,0.179,0.0374
-15:45,d,62.55,Grid + solar,3.300,Importing,0,Idle,83%,59.25,Active,15.64,0.82,14.81,0.00,0.05,Mid,0.182,0.039
-16:00,d,55.755,Grid + solar,3.148,Importing,0,Idle,83%,52.61,Active,13.94,0.79,13.15,0.00,0.052,Mid,0.185,0.0406
-16:15,d,59.43,Grid + solar,14.001,Importing,0,Idle,83%,45.43,Active,14.86,3.50,11.36,0.00,0.054,Mid,0.188,0.0422
-16:30,d,56.37,Grid + solar,16.299,Importing,0,Idle,83%,40.07,Active,14.09,4.07,10.02,0.00,0.056,Mid,0.191,0.0438
-16:45,d,53.31,Grid + solar,22.239,Importing,0,Idle,83%,31.07,Active,13.33,5.56,7.77,0.00,0.058,Mid,0.193,0.0454
-17:00,d,56.34,Grid + solar,29.126,Importing,0,Idle,83%,27.21,Active,14.09,7.28,6.80,0.00,0.062,Mid,0.199,0.0486
-17:15,d,54.33,Grid + solar,29.687,Importing,0,Idle,83%,24.64,Active,13.58,7.42,6.16,0.00,0.066,Peak,0.205,0.0518
-17:30,d,49.05,Grid + solar,29.871,Importing,0,Idle,83%,19.18,Active,12.26,7.47,4.79,0.00,0.07,Peak,0.211,0.055
-17:45,d,49.56,Grid + solar,33.489,Importing,0,Idle,83%,16.07,Active,12.39,8.37,4.02,0.00,0.074,Peak,0.216,0.0582
-18:00,d,44.835,Grid + solar,31.442,Importing,0,Idle,83%,13.39,Active,11.21,7.86,3.35,0.00,0.078,Peak,0.222,0.0614
-18:15,g,43.23,Battery + solar,0.000,,-33.15857143,Discharging,75%,10.07,Active,10.81,0.00,2.52,8.29,0.082,Peak,0.228,0.0646
-18:30,g,38.91,Battery + solar,0.000,,-30.98142857,Discharging,67%,7.93,Active,9.73,0.00,1.98,7.75,0.086,Peak,0.233,0.0678
-18:45,g,40.71,Battery + solar,0.000,,-35.46,Discharging,58%,5.25,Active,10.18,0.00,1.31,8.87,0.09,Peak,0.239,0.071
-19:00,g,32.055,Battery + solar,0.000,,-29.69785714,Discharging,51%,2.36,Active,8.01,0.00,0.59,7.42,0.094,Peak,0.245,0.0742
-19:15,g,33.675,Battery + solar,0.000,,-31.96071429,Discharging,43%,1.71,Active,8.42,0.00,0.43,7.99,0.096,Peak,0.248,0.0758
-19:30,g,32.61,Battery + solar,0.000,,-31.53857143,Discharging,35%,1.07,Active,8.15,0.00,0.27,7.88,0.098,Peak,0.251,0.0774
-19:45,g,27.255,Battery + solar,0.000,,-26.61214286,Discharging,28%,0.64,Active,6.81,0.00,0.16,6.65,0.1,Peak,0.253,0.079
-20:00,b,27.39,Battery only,0.000,,-27.39,Discharging,22%,0.00,Inactive,6.85,0.00,0.00,6.85,0.092,Peak,0.242,0.0726
-20:15,b,26.13,Battery only,14.900,,-11.23,Discharging,19%,0.00,Inactive,6.53,3.73,0.00,2.81,0.086,Peak,0.233,0.0678
-20:30,a,25.65,Grid only,25.650,Importing,0,Idle,19%,0.00,Inactive,6.41,6.41,0.00,0.00,0.08,Peak,0.225,0.063
-20:45,a,24.63,Grid only,24.630,Importing,0,Idle,19%,0.00,Inactive,6.16,6.16,0.00,0.00,0.074,Peak,0.216,0.0582
-21:00,a,21.72,Grid only,21.720,Importing,0,Idle,19%,0.00,Inactive,5.43,5.43,0.00,0.00,0.068,Peak,0.208,0.0534
-21:15,a,18.24,Grid only,18.240,Importing,0,Idle,19%,0.00,Inactive,4.56,4.56,0.00,0.00,0.064,Peak,0.202,0.0502
-21:30,a,17.46,Grid only,17.460,Importing,0,Idle,19%,0.00,Inactive,4.37,4.37,0.00,0.00,0.06,Mid,0.196,0.047
-21:45,a,14.475,Grid only,14.475,Importing,0,Idle,19%,0.00,Inactive,3.62,3.62,0.00,0.00,0.056,Mid,0.191,0.0438
-22:00,a,10.83,Grid only,10.830,Importing,0,Idle,19%,0.00,Inactive,2.71,2.71,0.00,0.00,0.052,Mid,0.185,0.0406
-22:15,a,10.845,Grid only,10.845,Importing,0,Idle,19%,0.00,Inactive,2.71,2.71,0.00,0.00,0.05,Mid,0.182,0.039
-22:30,a,10.5,Grid only,10.500,Importing,0,Idle,19%,0.00,Inactive,2.63,2.63,0.00,0.00,0.048,Low,0.179,0.0374
-22:45,a,10.23,Grid only,10.230,Importing,0,Idle,19%,0.00,Inactive,2.56,2.56,0.00,0.00,0.047,Low,0.178,0.0366
-23:00,a,9.735,Grid only,9.735,Importing,0,Idle,19%,0.00,Inactive,2.43,2.43,0.00,0.00,0.047,Low,0.178,0.0366
-23:15,a,9.69,Grid only,9.690,Importing,0,Idle,19%,0.00,Inactive,2.42,2.42,0.00,0.00,0.047,Low,0.178,0.0366
-23:30,a,8.085,Grid only,8.085,Importing,0,Idle,19%,0.00,Inactive,2.02,2.02,0.00,0.00,0.048,Low,0.179,0.0374
-23:45,a,8.55,Grid only,8.550,Importing,0,Idle,19%,0.00,Inactive,2.14,2.14,0.00,0.00,0.048,Low,0.179,0.0374
-,,,,,,,,,,,,,,,,,,
+﻿TIME,PATH,BUILDING LOAD PWR,BUILDING LOAD LABEL,GRID PWR,GRID LABEL,BATTERY PWR,BATTERY LABEL,BATTERY SOC,SOLAR PWR,SOLAR LABEL,BUILDING CONSUMPTION,GRID ENERGY,SOLAR PRODUCTION,BATTERY,SPOT PRICE,EXPORT PRICE
+00:00,a,7.605,Battery only,7.605,Importing,0,Idle,23%,0.00,Inactive,1.90,1.90,0.00,0.00,0.0231,0.0184
+00:15,a,7.71,Battery only,7.710,Importing,0,Idle,23%,0.00,Inactive,1.93,1.93,0.00,0.00,0.0228,0.0183
+00:30,a,7.065,Battery only,7.065,Importing,0,Idle,23%,0.00,Inactive,1.77,1.77,0.00,0.00,0.0220,0.0176
+00:45,a,8.235,Battery only,8.235,Importing,0,Idle,23%,0.00,Inactive,2.06,2.06,0.00,0.00,0.0124,0.0099
+01:00,a,7.17,Battery only,7.170,Importing,0,Idle,23%,0.00,Inactive,1.79,1.79,0.00,0.00,0.0124,0.0099
+01:15,a,7.47,Grid only,7.470,Importing,0,Idle,23%,0.00,Inactive,1.87,1.87,0.00,0.00,0.0115,0.0092
+01:30,a,7.875,Grid only,7.875,Importing,0,Idle,23%,0.00,Inactive,1.97,1.97,0.00,0.00,0.0114,0.0091
+01:45,a,7.335,Grid only,7.335,Importing,0,Idle,23%,0.00,Inactive,1.83,1.83,0.00,0.00,0.0084,0.0067
+02:00,a,7.395,Grid only,7.395,Importing,0,Idle,23%,0.00,Inactive,1.85,1.85,0.00,0.00,0.0120,0.0096
+02:15,a,7.44,Grid only,7.440,Importing,0,Idle,23%,0.00,Inactive,1.86,1.86,0.00,0.00,0.0117,0.0093
+02:30,c,7.89,Grid only,20.040,Importing,12.15,Charging,29%,0.00,Inactive,1.97,5.01,0.00,0.00,0.0117,0.0093
+02:45,c,8.43,Grid only,26.930,Importing,18.5,Charging,38%,0.00,Inactive,2.11,6.73,0.00,0.00,0.0112,0.0089
+03:00,c,7.74,Grid only,29.810,Importing,22.07,Charging,49%,0.00,Inactive,1.94,7.45,0.00,0.00,0.0112,0.0089
+03:15,c,7.38,Grid only,19.920,Importing,12.54,Charging,56%,0.00,Inactive,1.85,4.98,0.00,0.00,0.0112,0.0089
+03:30,c,7.89,Grid only,21.130,Importing,13.24,Charging,62%,0.00,Inactive,1.97,5.28,0.00,0.00,0.0100,0.0080
+03:45,c,7.545,Grid only,23.195,Importing,15.65,Charging,70%,0.00,Inactive,1.89,5.80,0.00,0.00,0.0097,0.0077
+04:00,c,7.725,Grid only,29.435,Importing,21.71,Charging,81%,0.00,Inactive,1.93,7.36,0.00,0.00,0.0094,0.0075
+04:15,c,8.595,Grid only,24.965,Importing,16.37,Charging,89%,0.00,Inactive,2.15,6.24,0.00,0.00,0.0092,0.0074
+04:30,c,8.43,Grid only,20.570,Importing,12.14,Charging,95%,0.00,Inactive,2.11,5.14,0.00,0.00,0.0100,0.0080
+04:45,a,9.18,Grid only,9.180,Importing,0,Idle,95%,0.00,Inactive,2.30,2.30,0.00,0.00,0.0102,0.0082
+05:00,a,9.315,Grid only,9.315,Importing,0,Idle,95%,0.00,Inactive,2.33,2.33,0.00,0.00,0.0112,0.0089
+05:15,d,12,Grid + solar,11.786,Importing,0,Idle,95%,0.21,Active,3.00,2.95,0.05,0.00,0.0113,0.0090
+05:30,d,14.64,Grid + solar,14.319,Importing,0,Idle,95%,0.32,Active,3.66,3.58,0.08,0.00,0.0113,0.0090
+05:45,d,16.23,Grid + solar,15.694,Importing,0,Idle,95%,0.54,Active,4.06,3.92,0.13,0.00,0.0117,0.0093
+06:00,d,19.05,Grid + solar,18.193,Importing,0,Idle,95%,0.86,Active,4.76,4.55,0.21,0.00,0.0223,0.0178
+06:15,d,23.235,Grid + solar,20.985,Importing,0,Idle,95%,2.25,Active,5.81,5.25,0.56,0.00,0.0230,0.0184
+06:30,d,26.895,Grid + solar,23.145,Importing,0,Idle,95%,3.75,Active,6.72,5.79,0.94,0.00,0.0230,0.0184
+06:45,d,30.225,Grid + solar,24.975,Importing,0,Idle,95%,5.25,Active,7.56,6.24,1.31,0.00,0.0233,0.0186
+07:00,d,33.84,Grid + solar,26.447,Importing,0,Idle,95%,7.39,Active,8.46,6.61,1.85,0.00,0.0300,0.0240
+07:15,d,39.765,Grid + solar,30.444,Importing,0,Idle,95%,9.32,Active,9.94,7.61,2.33,0.00,0.0350,0.0280
+07:30,d,43.68,Grid + solar,31.680,Importing,0,Idle,95%,12.00,Active,10.92,7.92,3.00,0.00,0.0350,0.0280
+07:45,d,52.605,Grid + solar,35.998,Importing,0,Idle,95%,16.61,Active,13.15,9.00,4.15,0.00,0.0350,0.0280
+08:00,d,47.325,Grid + solar,29.218,Importing,0,Idle,95%,18.11,Active,11.83,7.30,4.53,0.00,0.0350,0.0280
+08:15,d,55.44,Grid + solar,33.261,Importing,0,Idle,95%,22.18,Active,13.86,8.32,5.54,0.00,0.0350,0.0280
+08:30,g,58.8,Battery + solar,0.000,Importing,-33.83571429,Discharging,78%,24.96,Active,14.70,0.00,6.24,8.46,0.0274,0.0219
+08:45,g,64.005,Battery + solar,0.000,Importing,-32.39785714,Discharging,62%,31.61,Active,16.00,0.00,7.90,8.10,0.0219,0.0175
+09:00,g,64.74,Battery + solar,0.000,Importing,-30.02571429,Discharging,47%,34.71,Active,16.19,0.00,8.68,7.51,0.0220,0.0176
+09:15,g,62.655,Battery + solar,0.000,Importing,-24.405,Discharging,35%,38.25,Active,15.66,0.00,9.56,6.10,0.0130,0.0104
+09:30,g,66.225,Battery + solar,0.000,Importing,-24.86785714,Discharging,22%,41.36,Active,16.56,0.00,10.34,6.22,0.0124,0.0099
+09:45,d,69.075,Grid + solar,21.718,Importing,0,Idle,22%,47.36,Active,17.27,5.43,11.84,0.00,0.0102,0.0082
+10:00,d,68.115,Grid + solar,14.651,Importing,0,Idle,22%,53.46,Active,17.03,3.66,13.37,0.00,0.0076,0.0061
+10:15,d,71.82,Grid + solar,20.391,Importing,0,Idle,22%,51.43,Active,17.96,5.10,12.86,0.00,0.0100,0.0080
+10:30,d,65.1,Grid + solar,1.136,Importing,0,Idle,22%,63.96,Active,16.28,0.28,15.99,0.00,0.0084,0.0067
+10:45,d,75.975,Grid + solar,6.975,Importing,0,Idle,22%,69.00,Active,18.99,1.74,17.25,0.00,0.0100,0.0080
+11:00,d,75.96,Grid + solar,15.531,Importing,0,Idle,22%,60.43,Active,18.99,3.88,15.11,0.00,0.0084,0.0067
+11:15,f,70.785,Solar only,-0.119,Exporting,5.06,Charging,25%,75.96,Active,17.70,-0.03,18.99,0.00,0.0074,0.0059
+11:30,f,73.5,Solar only,-1.380,Exporting,9.87,Charging,30%,84.75,Active,18.38,-0.35,21.19,0.00,0.0074,0.0059
+11:45,f,71.88,Solar only,-0.899,Exporting,11.65,Charging,36%,84.43,Active,17.97,-0.22,21.11,0.00,0.0074,0.0059
+12:00,f,69.36,Solar only,-0.730,Exporting,21.41,Charging,46%,91.50,Active,17.34,-0.18,22.88,0.00,0.0074,0.0059
+12:15,f,71.655,Solar only,-0.771,Exporting,20.36,Charging,52%,92.79,Active,17.91,-0.19,23.20,0.00,0.0074,0.0059
+12:30,f,73.905,Solar only,-0.874,Exporting,9.65,Charging,54%,84.43,Active,18.48,-0.22,21.11,0.00,0.0074,0.0059
+12:45,f,69.63,Solar only,-1.300,Exporting,12.32,Charging,57%,83.25,Active,17.41,-0.33,20.81,0.00,0.0060,0.0048
+13:00,f,69.315,Solar only,-2.136,Exporting,19.62,Charging,62%,91.07,Active,17.33,-0.53,22.77,0.00,0.0030,0.0024
+13:15,f,69.465,Solar only,-1.781,Exporting,18.54,Charging,67%,89.79,Active,17.37,-0.45,22.45,0.00,0.0024,0.0019
+13:30,f,70.185,Solar only,-0.661,Exporting,10.69,Charging,69%,81.54,Active,17.55,-0.17,20.38,0.00,0.0023,0.0019
+13:45,f,71.79,Solar only,-3.846,Exporting,9.65,Charging,72%,85.29,Active,17.95,-0.96,21.32,0.00,0.0023,0.0019
+14:00,f,65.895,Solar only,-1.365,Exporting,18.24,Charging,76%,85.50,Active,16.47,-0.34,21.38,0.00,0.0020,0.0016
+14:15,f,68.28,Solar only,-2.450,Exporting,11.02,Charging,79%,81.75,Active,17.07,-0.61,20.44,0.00,0.0020,0.0016
+14:30,f,66.795,Solar only,-1.995,Exporting,10.71,Charging,82%,79.50,Active,16.70,-0.50,19.88,0.00,0.0020,0.0016
+14:45,f,60.66,Solar only,-0.514,Exporting,6.54,Charging,83%,67.71,Active,15.17,-0.13,16.93,0.00,0.0020,0.0016
+15:00,f,63.765,Grid + solar,-0.521,Exporting,0,Idle,83%,64.29,Active,15.94,-0.13,16.07,0.00,0.0020,0.0016
+15:15,d,63.48,Grid + solar,1.873,Importing,0,Idle,83%,61.61,Active,15.87,0.47,15.40,0.00,0.0020,0.0016
+15:30,d,62.67,Grid + solar,1.599,Importing,0,Idle,83%,61.07,Active,15.67,0.40,15.27,0.00,0.0020,0.0016
+15:45,d,62.55,Grid + solar,3.300,Importing,0,Idle,83%,59.25,Active,15.64,0.82,14.81,0.00,0.0020,0.0016
+16:00,d,55.755,Grid + solar,3.148,Importing,0,Idle,83%,52.61,Active,13.94,0.79,13.15,0.00,0.0020,0.0016
+16:15,d,59.43,Grid + solar,14.001,Importing,0,Idle,83%,45.43,Active,14.86,3.50,11.36,0.00,0.0038,0.0030
+16:30,d,56.37,Grid + solar,16.299,Importing,0,Idle,83%,40.07,Active,14.09,4.07,10.02,0.00,0.0062,0.0050
+16:45,d,53.31,Grid + solar,22.239,Importing,0,Idle,83%,31.07,Active,13.33,5.56,7.77,0.00,0.0117,0.0093
+17:00,d,56.34,Grid + solar,29.126,Importing,0,Idle,83%,27.21,Active,14.09,7.28,6.80,0.00,0.0113,0.0090
+17:15,d,54.33,Grid + solar,29.687,Importing,0,Idle,83%,24.64,Active,13.58,7.42,6.16,0.00,0.0119,0.0095
+17:30,d,49.05,Grid + solar,29.871,Importing,0,Idle,83%,19.18,Active,12.26,7.47,4.79,0.00,0.0199,0.0159
+17:45,d,49.56,Grid + solar,33.489,Importing,0,Idle,83%,16.07,Active,12.39,8.37,4.02,0.00,0.0221,0.0177
+18:00,d,44.835,Grid + solar,31.442,Importing,0,Idle,83%,13.39,Active,11.21,7.86,3.35,0.00,0.0221,0.0177
+18:15,g,43.23,Battery + solar,0.000,,-33.15857143,Discharging,75%,10.07,Active,10.81,0.00,2.52,8.29,0.0250,0.0200
+18:30,g,38.91,Battery + solar,0.000,,-30.98142857,Discharging,67%,7.93,Active,9.73,0.00,1.98,7.75,0.0350,0.0280
+18:45,g,40.71,Battery + solar,0.000,,-35.46,Discharging,58%,5.25,Active,10.18,0.00,1.31,8.87,0.0435,0.0348
+19:00,g,32.055,Battery + solar,0.000,,-29.69785714,Discharging,51%,2.36,Active,8.01,0.00,0.59,7.42,0.0511,0.0409
+19:15,g,33.675,Battery + solar,0.000,,-31.96071429,Discharging,43%,1.71,Active,8.42,0.00,0.43,7.99,0.0640,0.0512
+19:30,g,32.61,Battery + solar,0.000,,-31.53857143,Discharging,35%,1.07,Active,8.15,0.00,0.27,7.88,0.0661,0.0529
+19:45,g,27.255,Battery + solar,0.000,,-26.61214286,Discharging,28%,0.64,Active,6.81,0.00,0.16,6.65,0.0705,0.0564
+20:00,b,27.39,Battery only,0.000,,-27.39,Discharging,22%,0.00,Inactive,6.85,0.00,0.00,6.85,0.0740,0.0592
+20:15,b,26.13,Battery only,14.900,,-11.23,Discharging,19%,0.00,Inactive,6.53,3.73,0.00,2.81,0.0750,0.0600
+20:30,a,25.65,Grid only,25.650,Importing,0,Idle,19%,0.00,Inactive,6.41,6.41,0.00,0.00,0.0741,0.0593
+20:45,a,24.63,Grid only,24.630,Importing,0,Idle,19%,0.00,Inactive,6.16,6.16,0.00,0.00,0.0712,0.0570
+21:00,a,21.72,Grid only,21.720,Importing,0,Idle,19%,0.00,Inactive,5.43,5.43,0.00,0.00,0.0660,0.0528
+21:15,a,18.24,Grid only,18.240,Importing,0,Idle,19%,0.00,Inactive,4.56,4.56,0.00,0.00,0.0645,0.0516
+21:30,a,17.46,Grid only,17.460,Importing,0,Idle,19%,0.00,Inactive,4.37,4.37,0.00,0.00,0.0500,0.0400
+21:45,a,14.475,Grid only,14.475,Importing,0,Idle,19%,0.00,Inactive,3.62,3.62,0.00,0.00,0.0408,0.0326
+22:00,a,10.83,Grid only,10.830,Importing,0,Idle,19%,0.00,Inactive,2.71,2.71,0.00,0.00,0.0350,0.0280
+22:15,a,10.845,Grid only,10.845,Importing,0,Idle,19%,0.00,Inactive,2.71,2.71,0.00,0.00,0.0350,0.0280
+22:30,a,10.5,Grid only,10.500,Importing,0,Idle,19%,0.00,Inactive,2.63,2.63,0.00,0.00,0.0350,0.0280
+22:45,a,10.23,Grid only,10.230,Importing,0,Idle,19%,0.00,Inactive,2.56,2.56,0.00,0.00,0.0302,0.0241
+23:00,a,9.735,Grid only,9.735,Importing,0,Idle,19%,0.00,Inactive,2.43,2.43,0.00,0.00,0.0314,0.0251
+23:15,a,9.69,Grid only,9.690,Importing,0,Idle,19%,0.00,Inactive,2.42,2.42,0.00,0.00,0.0242,0.0194
+23:30,a,8.085,Grid only,8.085,Importing,0,Idle,19%,0.00,Inactive,2.02,2.02,0.00,0.00,0.0242,0.0194
+23:45,a,8.55,Grid only,8.550,Importing,0,Idle,19%,0.00,Inactive,2.14,2.14,0.00,0.00,0.0223,0.0179
+,,,,,,,,,,,,,,,,
