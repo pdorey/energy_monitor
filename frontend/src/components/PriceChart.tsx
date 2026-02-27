@@ -1,6 +1,7 @@
 /**
  * Price chart: wholesale (spot) as bars colored by tariff slot, buy and export as lines.
  */
+import { useTranslation } from "react-i18next";
 import {
   ComposedChart,
   Bar,
@@ -37,11 +38,12 @@ function getSlotBarColor(slotName: string): string {
 }
 
 export function PriceChart({ data }: PriceChartProps) {
+  const { t } = useTranslation();
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 shadow-lg">
-          <p className="text-slate-300 mb-2 font-semibold">{`Time: ${label}`}</p>
+          <p className="text-slate-300 mb-2 font-semibold">{`${t("priceChart.time")}: ${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {`${entry.name}: ${typeof entry.value === "number" && !isNaN(entry.value) ? entry.value.toFixed(2) : "—"} €/MWh`}
@@ -56,7 +58,7 @@ export function PriceChart({ data }: PriceChartProps) {
   if (!data || data.length === 0) {
     return (
       <div className="bg-slate-800/60 rounded-lg p-4 min-h-[200px] flex items-center justify-center border-2 border-dashed border-slate-600">
-        <span className="text-slate-500 text-sm">No price data</span>
+        <span className="text-slate-500 text-sm">{t("priceChart.noData")}</span>
       </div>
     );
   }
@@ -64,10 +66,10 @@ export function PriceChart({ data }: PriceChartProps) {
   return (
     <div className="bg-slate-800/60 rounded-lg p-4 min-h-[200px] min-w-0 overflow-hidden">
       <h3 className="text-base font-semibold text-slate-300 mb-1">
-        Wholesale, Buy & Export Prices (24h)
+        {t("priceChart.title")}
       </h3>
       <p className="text-xs text-slate-500 mb-3">
-        Buy Price = Wholesale + ERSE access charges
+        {t("priceChart.subtitle")}
       </p>
       <div className="w-full h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -86,7 +88,7 @@ export function PriceChart({ data }: PriceChartProps) {
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ color: "#94a3b8" }} iconType="line" />
-            <Bar dataKey="spot_price" name="Wholesale (spot)" fill="#64748b" radius={[2, 2, 0, 0]}>
+            <Bar dataKey="spot_price" name={t("priceChart.wholesale")} fill="#64748b" radius={[2, 2, 0, 0]}>
               {data.map((entry, index) => (
                 <Cell key={index} fill={getSlotBarColor(entry.slot_name || "")} />
               ))}
@@ -94,7 +96,7 @@ export function PriceChart({ data }: PriceChartProps) {
             <Line
               type="monotone"
               dataKey="buy_price"
-              name="Buy price"
+              name={t("priceChart.buyPrice")}
               stroke="#3b82f6"
               strokeWidth={2}
               dot={false}
@@ -103,7 +105,7 @@ export function PriceChart({ data }: PriceChartProps) {
             <Line
               type="monotone"
               dataKey="export_price"
-              name="Export price"
+              name={t("priceChart.exportPrice")}
               stroke="#10b981"
               strokeWidth={2}
               dot={false}

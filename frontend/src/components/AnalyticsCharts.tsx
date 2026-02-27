@@ -3,6 +3,7 @@
  * Supports progressive reveal based on currentTime from simulator.
  */
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   LineChart,
   Line,
@@ -34,6 +35,7 @@ interface AnalyticsChartsProps {
 
 /** Renders cumulative energy and price charts. Nullifies future values when currentTime set. */
 export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
+  const { t } = useTranslation();
   const [chartData, setChartData] = useState<IntradayDataPoint[]>([]);
 
   // Parse time string (e.g., "12:30") to minutes since midnight
@@ -92,7 +94,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
     if (active && payload && payload.length) {
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 shadow-lg">
-          <p className="text-slate-300 mb-2 font-semibold">{`Time: ${label}`}</p>
+          <p className="text-slate-300 mb-2 font-semibold">{`${t("priceChart.time")}: ${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {`${entry.name}: ${entry.value.toFixed(2)} ${entry.dataKey.includes("price") ? "€/MWh" : "kWh"}`}
@@ -109,7 +111,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
       {/* Chart 1: Cumulative Energy Consumption */}
       <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 min-w-0 overflow-hidden">
         <h3 className="text-base sm:text-lg font-semibold text-slate-300 mb-3 sm:mb-4">
-          Cumulative Energy Consumption (24h)
+          {t("analyticsCharts.consumptionTitle")}
         </h3>
         <div className="w-full h-[220px] sm:h-[270px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -125,7 +127,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             <YAxis
               stroke="#94a3b8"
               tick={{ fill: "#94a3b8", fontSize: 10 }}
-              label={{ value: "Energy (kWh)", angle: -90, position: "insideLeft", fill: "#94a3b8" }}
+              label={{ value: t("analyticsCharts.energyYAxis"), angle: -90, position: "insideLeft", fill: "#94a3b8" }}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend
@@ -135,7 +137,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             <Line
               type="monotone"
               dataKey="cumulative_grid_energy"
-              name="Grid Energy"
+              name={t("analyticsCharts.gridEnergy")}
               stroke="#ef4444"
               strokeWidth={2}
               dot={false}
@@ -146,7 +148,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             <Line
               type="monotone"
               dataKey="cumulative_solar_energy"
-              name="Solar Energy"
+              name={t("analyticsCharts.solarEnergy")}
               stroke="#fbbf24"
               strokeWidth={2}
               dot={false}
@@ -157,7 +159,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             <Line
               type="monotone"
               dataKey="cumulative_battery_energy"
-              name="Battery Energy"
+              name={t("analyticsCharts.batteryEnergy")}
               stroke="#10b981"
               strokeWidth={2}
               dot={false}
@@ -168,7 +170,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             <Line
               type="monotone"
               dataKey="cumulative_building_load"
-              name="Building Load"
+              name={t("analyticsCharts.buildingLoad")}
               stroke="#3b82f6"
               strokeWidth={2}
               dot={false}
@@ -184,7 +186,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
       {/* Chart 2: Price Evolution */}
       <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 min-w-0 overflow-hidden">
         <h3 className="text-base sm:text-lg font-semibold text-slate-300 mb-3 sm:mb-4">
-          Daily Price Evolution (24h)
+          {t("analyticsCharts.priceTitle")}
         </h3>
         <div className="w-full h-[220px] sm:h-[270px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -200,7 +202,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             <YAxis
               stroke="#94a3b8"
               tick={{ fill: "#94a3b8", fontSize: 10 }}
-              label={{ value: "Price (€/MWh)", angle: -90, position: "insideLeft", fill: "#94a3b8" }}
+              label={{ value: t("analyticsCharts.priceYAxis"), angle: -90, position: "insideLeft", fill: "#94a3b8" }}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend
@@ -210,7 +212,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             <Line
               type="monotone"
               dataKey="spot_price"
-              name="Wholesale Price"
+              name={t("analyticsCharts.wholesalePrice")}
               stroke="#8b5cf6"
               strokeWidth={2}
               dot={false}
@@ -221,7 +223,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             <Line
               type="monotone"
               dataKey="buy_price"
-              name="Buy Price"
+              name={t("analyticsCharts.buyPrice")}
               stroke="#3b82f6"
               strokeWidth={2}
               dot={false}
@@ -232,7 +234,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
             <Line
               type="monotone"
               dataKey="export_price"
-              name="Export Price"
+              name={t("analyticsCharts.exportPrice")}
               stroke="#10b981"
               strokeWidth={2}
               dot={false}

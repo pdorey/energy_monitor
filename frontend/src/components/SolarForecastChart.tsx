@@ -2,6 +2,7 @@
  * Solar forecast for tomorrow: bar chart (hourly) + Total today / Total tomorrow cards.
  * Tomorrow forecast = today's hourly pattern + 2%.
  */
+import { useTranslation } from "react-i18next";
 import {
   BarChart,
   Bar,
@@ -44,10 +45,11 @@ function getHourlySolar(data: IntradayPoint[]): { hour: number; label: string; k
 }
 
 export function SolarForecastChart({ data }: SolarForecastChartProps) {
+  const { t } = useTranslation();
   if (!data || data.length < 4) {
     return (
       <div className="bg-slate-800/60 rounded-lg p-4 min-h-[180px] flex items-center justify-center border-2 border-dashed border-slate-600">
-        <span className="text-slate-500 text-sm">No solar data</span>
+        <span className="text-slate-500 text-sm">{t("solarForecast.noData")}</span>
       </div>
     );
   }
@@ -77,17 +79,17 @@ export function SolarForecastChart({ data }: SolarForecastChartProps) {
   return (
     <div className="bg-slate-800/60 rounded-lg p-4 min-h-[180px] min-w-0 overflow-hidden">
       <h3 className="text-base font-semibold text-slate-300 mb-3">
-        Solar Forecast for Tomorrow
+        {t("solarForecast.title")}
       </h3>
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div className="bg-slate-700/50 rounded-lg p-2">
-          <div className="text-xs uppercase text-slate-400">Total today</div>
+          <div className="text-xs uppercase text-slate-400">{t("solarForecast.totalToday")}</div>
           <div className="text-lg font-semibold text-amber-300">
             {totalToday.toFixed(2)} <span className="text-sm">kWh</span>
           </div>
         </div>
         <div className="bg-slate-700/50 rounded-lg p-2">
-          <div className="text-xs uppercase text-slate-400">Total tomorrow</div>
+          <div className="text-xs uppercase text-slate-400">{t("solarForecast.totalTomorrow")}</div>
           <div className="text-lg font-semibold text-amber-300">
             {totalTomorrow.toFixed(2)} <span className="text-sm">kWh</span>
           </div>
@@ -109,7 +111,7 @@ export function SolarForecastChart({ data }: SolarForecastChartProps) {
               label={{ value: "kWh", angle: -90, position: "insideLeft", fill: "#94a3b8" }}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="kWh" fill="#f59e0b" radius={[2, 2, 0, 0]} name="Solar (forecast)" />
+            <Bar dataKey="kWh" fill="#f59e0b" radius={[2, 2, 0, 0]} name={t("solarForecast.barName")} />
           </BarChart>
         </ResponsiveContainer>
       </div>

@@ -1,0 +1,90 @@
+{
+  "app": {
+    "title": "Demo Monitor de Energia",
+    "pageTitle": "Monitor de Energia"
+  },
+  "status": {
+    "live": "Live",
+    "offline": "Offline"
+  },
+  "tabs": {
+    "dashboard": "Painel",
+    "equipment": "Equipamento",
+    "analytics": "Análises"
+  },
+  "cards": {
+    "equipment": "Equipamento",
+    "online": "Online",
+    "tariff": "Tarifa",
+    "battery": "Bateria",
+    "soc": "SOC",
+    "daily": "Diário",
+    "consumption": "Consumo",
+    "solar": "Solar",
+    "today": "Hoje",
+    "prices": "Preços",
+    "buy": "Compra",
+    "export": "Venda"
+  },
+  "tariff": {
+    "weekday": "Dia útil",
+    "saturday": "Sábado",
+    "sunday": "Domingo",
+    "summer": "Verão",
+    "winter": "Inverno",
+    "super_off_peak": "Super vazio",
+    "off_peak": "Vazio",
+    "standard": "Normais",
+    "peak": "Ponta"
+  },
+  "energyFlow": {
+    "title": "Fluxo de Energia",
+    "building": "EDIFÍCIO",
+    "grid": "REDE",
+    "gateway": "GATEWAY",
+    "inverter": "INVERSOR",
+    "solar": "SOLAR",
+    "battery": "BATERIA",
+    "dcAc": "DC↔AC"
+  },
+  "priceChart": {
+    "title": "Preços Mercado, Compra e Venda (24h)",
+    "subtitle": "Preço Compra = Mercado + encargos de acesso ERSE",
+    "noData": "Sem dados de preços",
+    "time": "Hora",
+    "wholesale": "Mercado (spot)",
+    "buyPrice": "Preço compra",
+    "exportPrice": "Preço venda"
+  },
+  "solarForecast": {
+    "title": "Previsão Solar para Amanhã",
+    "totalToday": "Total hoje",
+    "totalTomorrow": "Total amanhã",
+    "noData": "Sem dados solares",
+    "barName": "Solar (previsão)"
+  },
+  "analyticsCharts": {
+    "consumptionTitle": "Consumo Acumulado de Energia (24h)",
+    "priceTitle": "Evolução Diária de Preços (24h)",
+    "energyYAxis": "Energia (kWh)",
+    "priceYAxis": "Preço (€/MWh)",
+    "gridEnergy": "Energia da Rede",
+    "solarEnergy": "Energia Solar",
+    "batteryEnergy": "Energia da Bateria",
+    "buildingLoad": "Carga do Edifício",
+    "wholesalePrice": "Preço Mercado",
+    "buyPrice": "Preço Compra",
+    "exportPrice": "Preço Venda"
+  },
+  "loading": "A carregar...",
+  "loadingAnalytics": "A carregar dados de análises...",
+  "errors": {
+    "failedAnalytics": "Falha ao carregar análises",
+    "retryHint": "Tente mudar de separador ou atualizar.",
+    "retry": "Tentar novamente"
+  },
+  "equipment": {
+    "statusOnline": "online",
+    "statusOffline": "offline"
+  }
+}

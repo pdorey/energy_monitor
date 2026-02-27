@@ -1,0 +1,90 @@
+{
+  "app": {
+    "title": "Energy Monitor Demo",
+    "pageTitle": "Energy Monitor"
+  },
+  "status": {
+    "live": "Live",
+    "offline": "Offline"
+  },
+  "tabs": {
+    "dashboard": "Dashboard",
+    "equipment": "Equipment",
+    "analytics": "Analytics"
+  },
+  "cards": {
+    "equipment": "Equipment",
+    "online": "Online",
+    "tariff": "Tariff",
+    "battery": "Battery",
+    "soc": "SOC",
+    "daily": "Daily",
+    "consumption": "Consumption",
+    "solar": "Solar",
+    "today": "Today",
+    "prices": "Prices",
+    "buy": "Buy",
+    "export": "Export"
+  },
+  "tariff": {
+    "weekday": "Weekday",
+    "saturday": "Saturday",
+    "sunday": "Sunday",
+    "summer": "Summer",
+    "winter": "Winter",
+    "super_off_peak": "Super off-peak",
+    "off_peak": "Off-peak",
+    "standard": "Standard",
+    "peak": "Peak"
+  },
+  "energyFlow": {
+    "title": "Energy Flow",
+    "building": "BUILDING",
+    "grid": "GRID",
+    "gateway": "GATEWAY",
+    "inverter": "INVERTER",
+    "solar": "SOLAR",
+    "battery": "BATTERY",
+    "dcAc": "DC↔AC"
+  },
+  "priceChart": {
+    "title": "Wholesale, Buy & Export Prices (24h)",
+    "subtitle": "Buy Price = Wholesale + ERSE access charges",
+    "noData": "No price data",
+    "time": "Time",
+    "wholesale": "Wholesale (spot)",
+    "buyPrice": "Buy price",
+    "exportPrice": "Export price"
+  },
+  "solarForecast": {
+    "title": "Solar Forecast for Tomorrow",
+    "totalToday": "Total today",
+    "totalTomorrow": "Total tomorrow",
+    "noData": "No solar data",
+    "barName": "Solar (forecast)"
+  },
+  "analyticsCharts": {
+    "consumptionTitle": "Cumulative Energy Consumption (24h)",
+    "priceTitle": "Daily Price Evolution (24h)",
+    "energyYAxis": "Energy (kWh)",
+    "priceYAxis": "Price (€/MWh)",
+    "gridEnergy": "Grid Energy",
+    "solarEnergy": "Solar Energy",
+    "batteryEnergy": "Battery Energy",
+    "buildingLoad": "Building Load",
+    "wholesalePrice": "Wholesale Price",
+    "buyPrice": "Buy Price",
+    "exportPrice": "Export Price"
+  },
+  "loading": "Loading...",
+  "loadingAnalytics": "Loading analytics data...",
+  "errors": {
+    "failedAnalytics": "Failed to load analytics",
+    "retryHint": "Retry by switching tabs or refreshing.",
+    "retry": "Retry"
+  },
+  "equipment": {
+    "statusOnline": "online",
+    "statusOffline": "offline"
+  }
+}

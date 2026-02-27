@@ -3,6 +3,7 @@
  * Animated connectors follow path_definitions from consumption-data API.
  */
 import { useMemo, useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Snapshot } from "../hooks/useLiveData";
 
 /** Props for EnergyFlowDiagram. */
@@ -66,6 +67,7 @@ export function EnergyFlowDiagram({
   validConnections,
   displayTime,
 }: EnergyFlowDiagramProps) {
+  const { t } = useTranslation();
   void activePaths;
   const solarKw = snapshot?.solar.power_w ? snapshot.solar.power_w / 1000 : overview?.solar_kw ?? 0;
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
@@ -226,7 +228,7 @@ export function EnergyFlowDiagram({
   return (
     <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 flex flex-col h-full min-h-0 w-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4 shrink-0">
-        <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">Energy Flow</div>
+        <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">{t("energyFlow.title")}</div>
         {currentTime && <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">{currentTime}</div>}
       </div>
       <div className="flex-1 flex items-center justify-center min-h-0 min-w-0">
@@ -270,7 +272,7 @@ export function EnergyFlowDiagram({
             <div className="h-full bg-slate-700 rounded-lg p-2 border-2 border-slate-600 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">🏢</span>
-                <span className="text-xs font-semibold text-slate-300 truncate">BUILDING</span>
+                <span className="text-xs font-semibold text-slate-300 truncate">{t("energyFlow.building")}</span>
               </div>
               <div className="text-sm font-mono text-slate-300 truncate">{loadKw.toFixed(1)}{loadKw !== 0 ? " kW" : ""}</div>
             </div>
@@ -280,7 +282,7 @@ export function EnergyFlowDiagram({
             <div className="h-full bg-blue-900 rounded-lg p-2 border-2 border-blue-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">⚡</span>
-                <span className="text-xs font-semibold text-blue-300 truncate">GRID</span>
+                <span className="text-xs font-semibold text-blue-300 truncate">{t("energyFlow.grid")}</span>
               </div>
               <div className={`text-sm font-mono truncate ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>{gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)}{gridKw !== 0 ? " kW" : ""}</div>
             </div>
@@ -290,7 +292,7 @@ export function EnergyFlowDiagram({
             <div className="h-full bg-red-900 rounded-lg p-2 border-2 border-red-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">📊</span>
-                <span className="text-xs font-semibold text-red-300 truncate">GATEWAY</span>
+                <span className="text-xs font-semibold text-red-300 truncate">{t("energyFlow.gateway")}</span>
               </div>
               <div className="text-sm font-mono text-red-300 truncate">{Math.abs(gridKw).toFixed(1)}{Math.abs(gridKw) !== 0 ? " kW" : ""}</div>
             </div>
@@ -300,9 +302,9 @@ export function EnergyFlowDiagram({
             <div className="h-full bg-slate-700 rounded-lg p-2 border-2 border-slate-500 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">🔄</span>
-                <span className="text-xs font-semibold text-slate-300 truncate">INVERTER</span>
+                <span className="text-xs font-semibold text-slate-300 truncate">{t("energyFlow.inverter")}</span>
               </div>
-              <div className="text-sm font-mono text-slate-300 truncate">DC↔AC</div>
+              <div className="text-sm font-mono text-slate-300 truncate">{t("energyFlow.dcAc")}</div>
             </div>
           </div>
 
@@ -310,7 +312,7 @@ export function EnergyFlowDiagram({
             <div className="h-full bg-amber-900 rounded-lg p-2 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">☀️</span>
-                <span className="text-xs font-semibold text-amber-300 truncate">SOLAR</span>
+                <span className="text-xs font-semibold text-amber-300 truncate">{t("energyFlow.solar")}</span>
               </div>
               <div className="text-sm font-mono text-amber-300 truncate">{solarKw.toFixed(1)}{solarKw !== 0 ? " kW" : ""}</div>
             </div>
@@ -320,7 +322,7 @@ export function EnergyFlowDiagram({
             <div className="h-full bg-emerald-900 rounded-lg p-2 border-2 border-emerald-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">🔋</span>
-                <span className="text-xs font-semibold text-emerald-300 truncate">BATTERY</span>
+                <span className="text-xs font-semibold text-emerald-300 truncate">{t("energyFlow.battery")}</span>
               </div>
               <div className="text-sm font-mono text-emerald-300 truncate">{batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)}{batteryKw !== 0 ? " kW" : ""}</div>
             </div>

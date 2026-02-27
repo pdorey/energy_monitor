@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchJSON } from "./api/client";
 import { useLiveData } from "./hooks/useLiveData";
 import { EnergyFlowDiagram } from "./components/EnergyFlowDiagram";
@@ -37,14 +38,14 @@ function getSlotColor(slotName: string): string {
   return "text-slate-300";
 }
 
-/** Format slot_name for display (e.g. super_off_peak -> Super off-peak). */
-function formatSlotName(slotName: string): string {
+/** Format slot_name for display. Uses translation if key exists, else formatted string. */
+function formatSlotName(slotName: string, t: (key: string) => string): string {
   if (!slotName) return "—";
+  const key = `tariff.${slotName.toLowerCase().replace(/-/g, "_")}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
   const s = slotName.toLowerCase().replace(/_/g, " ");
-  return s
-    .split(" ")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
+  return s.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
 interface ConsumptionData {
@@ -87,6 +88,7 @@ interface ConsumptionData {
  * Uses WebSocket for real-time data and REST for overview/consumption/analytics.
  */
 export function App() {
+  const { t, i18n } = useTranslation();
   const [tab, setTab] = useState<"overview" | "equipment" | "analytics">("overview");
   const [overview, setOverview] = useState<Overview | null>(null);
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
@@ -107,10 +109,10 @@ export function App() {
         setIntradayData(res.data || []);
       }
     } catch {
-      setIntradayError("Failed to load analytics");
+      setIntradayError(t("errors.failedAnalytics"));
       setIntradayData([]);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     async function load() {
@@ -226,14 +228,29 @@ export function App() {
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-10">
         <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h1 className="text-lg sm:text-xl font-semibold truncate">⚡ Energy Monitor Demo</h1>
-          <div className="flex items-center gap-2 text-sm shrink-0">
-            <span
-              className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                wsStatus === "open" ? "bg-emerald-400" : "bg-red-500"
-              }`}
-            />
-            <span>{wsStatus === "open" ? "Live" : "Offline"}</span>
+          <h1 className="text-lg sm:text-xl font-semibold truncate">⚡ {t("app.title")}</h1>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <div className="flex items-center gap-2 text-sm">
+              <span
+                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                  wsStatus === "open" ? "bg-emerald-400" : "bg-red-500"
+                }`}
+              />
+              <span>{wsStatus === "open" ? t("status.live") : t("status.offline")}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => i18n.changeLanguage(i18n.language === "pt" ? "en" : "pt")}
+              className="p-1 rounded hover:bg-slate-700/80 text-slate-400 hover:text-slate-300 transition-colors"
+              aria-label="Switch language"
+              title={i18n.language === "pt" ? "English" : "Português"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                <path d="M2 12h20" />
+              </svg>
+            </button>
           </div>
         </div>
         <nav className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 flex gap-2 sm:gap-4 text-sm overflow-x-auto -mb-px">
@@ -245,63 +262,63 @@ export function App() {
                 tab === id ? "border-emerald-400 text-emerald-300" : "border-transparent text-slate-400 hover:text-slate-300"
               }`}
             >
-              {id === "overview" ? "Dashboard" : id === "equipment" ? "Equipment" : "Analytics"}
+              {id === "overview" ? t("tabs.dashboard") : id === "equipment" ? t("tabs.equipment") : t("tabs.analytics")}
             </button>
           ))}
         </nav>
       </header>
 
       <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 min-w-0">
-        {loading && <div className="text-slate-400">Loading...</div>}
+        {loading && <div className="text-slate-400">{t("loading")}</div>}
 
         {!loading && tab === "overview" && (
           <div className="space-y-6">
             {/* Stats row: Equipment, Tariff, Battery, Daily, Solar, Prices */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-                <div className="text-xs uppercase text-slate-400">Equipment</div>
+                <div className="text-xs uppercase text-slate-400">{t("cards.equipment")}</div>
                 <div className={`mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold ${allOnline ? "text-emerald-400" : ""}`}>
                   {overview?.online_equipment ?? 0}/{overview?.total_equipment ?? 0}
                 </div>
-                <div className={`text-sm mt-1 ${allOnline ? "text-emerald-400" : "text-slate-400"}`}>Online</div>
+                <div className={`text-sm mt-1 ${allOnline ? "text-emerald-400" : "text-slate-400"}`}>{t("cards.online")}</div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-                <div className="text-xs uppercase text-slate-400">Tariff</div>
+                <div className="text-xs uppercase text-slate-400">{t("cards.tariff")}</div>
                 <div className="mt-1 sm:mt-2 text-sm sm:text-base font-medium text-slate-300 capitalize">
-                  {consumptionData?.day_of_week ?? "—"} · {consumptionData?.season ?? "—"}
+                  {consumptionData?.day_of_week ? t(`tariff.${consumptionData.day_of_week}`) : "—"} · {consumptionData?.season ? t(`tariff.${consumptionData.season}`) : "—"}
                 </div>
                 <div className={`mt-0.5 text-lg sm:text-xl font-semibold ${getSlotColor(consumptionData?.slot_name ?? "")}`}>
-                  {formatSlotName(consumptionData?.slot_name ?? "")}
+                  {formatSlotName(consumptionData?.slot_name ?? "", t)}
                 </div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-                <div className="text-xs uppercase text-slate-400">Battery</div>
+                <div className="text-xs uppercase text-slate-400">{t("cards.battery")}</div>
                 <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-semibold text-emerald-300">
                   {batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)} kW
                 </div>
-                <div className="text-sm text-slate-400 mt-0.5">{soc.toFixed(0)}% SOC</div>
+                <div className="text-sm text-slate-400 mt-0.5">{soc.toFixed(0)}% {t("cards.soc")}</div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-                <div className="text-xs uppercase text-slate-400">Daily</div>
+                <div className="text-xs uppercase text-slate-400">{t("cards.daily")}</div>
                 <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-semibold text-slate-300">
                   {dailyConsumptionSum.toFixed(2)} <span className="text-sm">kWh</span>
                 </div>
-                <div className="text-sm text-slate-400 mt-1">Consumption</div>
+                <div className="text-sm text-slate-400 mt-1">{t("cards.consumption")}</div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-                <div className="text-xs uppercase text-slate-400">Solar</div>
+                <div className="text-xs uppercase text-slate-400">{t("cards.solar")}</div>
                 <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-semibold text-amber-300">
                   {dailySolarSum.toFixed(2)} <span className="text-sm">kWh</span>
                 </div>
-                <div className="text-sm text-slate-400 mt-1">Today</div>
+                <div className="text-sm text-slate-400 mt-1">{t("cards.today")}</div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-                <div className="text-xs uppercase text-slate-400">Prices</div>
+                <div className="text-xs uppercase text-slate-400">{t("cards.prices")}</div>
                 <div className={`mt-1 sm:mt-2 text-sm sm:text-base font-medium ${getTariffColor(consumptionData?.tariff || "", false)}`}>
-                  Buy: {consumptionData?.buy_price !== undefined ? consumptionData.buy_price.toFixed(0) : "—"} €/MWh
+                  {t("cards.buy")}: {consumptionData?.buy_price !== undefined ? consumptionData.buy_price.toFixed(0) : "—"} €/MWh
                 </div>
                 <div className={`mt-0.5 text-sm sm:text-base font-medium ${getTariffColor(consumptionData?.tariff || "", true)}`}>
-                  Export: {consumptionData?.export_price !== undefined ? consumptionData.export_price.toFixed(0) : "—"} €/MWh
+                  {t("cards.export")}: {consumptionData?.export_price !== undefined ? consumptionData.export_price.toFixed(0) : "—"} €/MWh
                 </div>
               </div>
             </div>
@@ -343,7 +360,7 @@ export function App() {
                     <div className="text-xs text-slate-400 capitalize">{eq.type}</div>
                   </div>
                   <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/40">
-                    {eq.status}
+                    {eq.status === "online" ? t("equipment.statusOnline") : eq.status === "offline" ? t("equipment.statusOffline") : eq.status}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
@@ -372,13 +389,13 @@ export function App() {
                   <div className="text-amber-400 text-sm">{intradayError}</div>
                 )}
                 <div className="text-slate-400 text-sm">
-                  {intradayError ? "Retry by switching tabs or refreshing." : "Loading analytics data..."}
+                  {intradayError ? t("errors.retryHint") : t("loadingAnalytics")}
                 </div>
                 <button
                   onClick={fetchIntraday}
                   className="text-sm px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-300"
                 >
-                  Retry
+                  {t("errors.retry")}
                 </button>
               </div>
             )}
