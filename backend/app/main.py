@@ -51,6 +51,17 @@ CONSUMPTION_CSV = os.path.join(ROOT_DIR, "Consumption.csv")
 PATHS_CSV = os.path.join(ROOT_DIR, "Paths.csv")
 
 
+def _parse_spot_price_eur_mwh(row: dict) -> float:
+    """Parse spot price (€/MWh) from row. Handles SPOT PRICE (€/MWh), SPOT PRICE, or key containing both."""
+    for k, v in (row or {}).items():
+        if k and "SPOT" in (k or "").upper() and "PRICE" in (k or "").upper():
+            try:
+                return float((v or "").strip()) if (v or "").strip() else 0.0
+            except ValueError:
+                pass
+    return 0.0
+
+
 sim: Simulator | None = None
 clients: Set[WebSocket] = set()
 start_time = datetime.now(timezone.utc)
@@ -257,7 +268,7 @@ async def get_intraday_analytics():
                 return float(val) if val else 0.0
             except ValueError:
                 return 0.0
-        
+
         data = []
         cumulative_grid = 0.0
         cumulative_solar = 0.0
@@ -284,13 +295,20 @@ async def get_intraday_analytics():
             cumulative_battery += battery_energy
             cumulative_building += building_consumption
             
-            # Prices: apply grid tariff formula from spot price
-            spot_price = parse_float("SPOT PRICE", row) * 1000
+            # Prices: spot in €/MWh from CSV; apply grid tariff formula for buy/export
+            spot_price = _parse_spot_price_eur_mwh(row)
             buy_price = 0.0
             export_price = 0.0
+            slot_name = "standard"
             try:
                 hour = i // 4  # 15-min slot index -> hour (0-23)
                 ts = datetime.combine(today, time(hour, (i % 4) * 15, 0), tzinfo=timezone.utc)
+                season = grid_tariff.get_season(ts)
+                day_of_week = grid_tariff.get_day_of_week(ts, repo)
+                slot_name = repo.get_slot_name(
+                    tariff_type, settings.get("voltage_level", "medium_voltage"),
+                    season, day_of_week, hour
+                ) or "standard"
                 buy_eur_kwh, export_eur_kwh = compute_buy_export_prices(
                     spot_price, ts, tariff_type, repo=repo, site_settings=settings
                 )
@@ -308,6 +326,7 @@ async def get_intraday_analytics():
                 "spot_price": spot_price,
                 "buy_price": buy_price,
                 "export_price": export_price,
+                "slot_name": slot_name,
             })
         
         return {"data": data}
@@ -368,7 +387,7 @@ async def get_consumption_data():
         # Additional fields for new boxes
         building_consumption = parse_float("BUILDING CONSUMPTION")
         solar_production = parse_float("SOLAR PRODUCTION")
-        spot_price_eur_mwh = parse_float("SPOT PRICE") * 1000
+        spot_price_eur_mwh = _parse_spot_price_eur_mwh(row)
         tariff = (row.get("TARIFF") or "").strip()
 
         # Tariff slot and prices: day_of_week, season, slot_name, buy_price, export_price from grid_tariff formula

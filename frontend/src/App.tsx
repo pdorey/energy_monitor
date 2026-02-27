@@ -3,6 +3,7 @@ import { fetchJSON } from "./api/client";
 import { useLiveData } from "./hooks/useLiveData";
 import { EnergyFlowDiagram } from "./components/EnergyFlowDiagram";
 import { AnalyticsCharts } from "./components/AnalyticsCharts";
+import { PriceChart } from "./components/PriceChart";
 
 interface Overview {
   timestamp: string;
@@ -315,9 +316,7 @@ export function App() {
                 />
               </div>
               <div className="flex flex-col gap-4 min-h-[320px] lg:min-h-0">
-                <div className="flex-1 min-h-[150px] bg-slate-800/60 rounded-lg border-2 border-dashed border-slate-600 flex items-center justify-center">
-                  <span className="text-slate-500 text-sm">Chart placeholder 1</span>
-                </div>
+                <PriceChart data={intradayData} />
                 <div className="flex-1 min-h-[150px] bg-slate-800/60 rounded-lg border-2 border-dashed border-slate-600 flex items-center justify-center">
                   <span className="text-slate-500 text-sm">Chart placeholder 2</span>
                 </div>

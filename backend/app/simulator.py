@@ -23,6 +23,17 @@ from .models import (
 )
 
 
+def _parse_float_spot(row: dict) -> float:
+    """Parse spot price from row. Tries SPOT PRICE (€/MWh), SPOT PRICE, or any key containing both."""
+    for k, v in (row or {}).items():
+        if "SPOT" in (k or "").upper() and "PRICE" in (k or "").upper():
+            try:
+                return float((v or "").strip()) if (v or "").strip() else 0.0
+            except ValueError:
+                pass
+    return _parse_float(row or {}, "SPOT PRICE")
+
+
 def _parse_float(row: dict, field: str) -> float:
     """Parse float from CSV row field. Returns 0.0 on missing or invalid."""
     val = (row.get(field) or "").strip()
@@ -209,7 +220,7 @@ class Simulator:
             "battery_soc": self.battery_soc,
             "ev_kw": ev_kw,
             "heat_pump_kw": heat_pump_kw,
-            "spot_price": _parse_float(row, "SPOT PRICE"),
+            "spot_price": _parse_float_spot(row),
             "tariff": (row.get("TARIFF") or "").strip(),
         }
 

@@ -1,6 +1,5 @@
--- Grid tariff costs (TAR) with slot ranges embedded.
+-- Grid tariff costs (TAR) with slot ranges embedded. grid_access_eur_kwh in €/kWh (same units as buy_spread).
 -- Source: ERSE_TAR_Complete_2026.xlsx (run scripts/generate_grid_tariff_costs.py to regenerate).
--- Placeholder values below when Excel is not available.
 
 INSERT OR IGNORE INTO grid_tariff_costs (
     tariff_type, voltage_level, season, day_of_week, slot_name,
