@@ -180,6 +180,7 @@ export function App() {
 
   const soc = snapshot?.battery.soc_percent ?? overview?.battery_soc_percent ?? 0;
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
+  const allOnline = (overview?.online_equipment ?? 0) === (overview?.total_equipment ?? 0) && (overview?.total_equipment ?? 0) > 0;
 
   // Cumulative daily consumption and solar (from consumption data)
   const [dailyConsumptionSum, setDailyConsumptionSum] = useState(0);
@@ -259,10 +260,10 @@ export function App() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Equipment</div>
-                <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold">
+                <div className={`mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold ${allOnline ? "text-emerald-400" : ""}`}>
                   {overview?.online_equipment ?? 0}/{overview?.total_equipment ?? 0}
                 </div>
-                <div className="text-sm text-slate-400 mt-1">Online</div>
+                <div className={`text-sm mt-1 ${allOnline ? "text-emerald-400" : "text-slate-400"}`}>Online</div>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Tariff</div>
@@ -296,11 +297,11 @@ export function App() {
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">Prices</div>
-                <div className={`mt-1 sm:mt-2 text-lg sm:text-xl font-semibold ${getTariffColor(consumptionData?.tariff || "", false)}`}>
-                  Buy: {consumptionData?.buy_price !== undefined ? consumptionData.buy_price.toFixed(0) : "—"}
+                <div className={`mt-1 sm:mt-2 text-sm sm:text-base font-medium ${getTariffColor(consumptionData?.tariff || "", false)}`}>
+                  Buy: {consumptionData?.buy_price !== undefined ? consumptionData.buy_price.toFixed(0) : "—"} €/MWh
                 </div>
-                <div className={`text-sm ${getTariffColor(consumptionData?.tariff || "", true)}`}>
-                  Exp: {consumptionData?.export_price !== undefined ? consumptionData.export_price.toFixed(0) : "—"} €/MWh
+                <div className={`mt-0.5 text-sm sm:text-base font-medium ${getTariffColor(consumptionData?.tariff || "", true)}`}>
+                  Export: {consumptionData?.export_price !== undefined ? consumptionData.export_price.toFixed(0) : "—"} €/MWh
                 </div>
               </div>
             </div>
