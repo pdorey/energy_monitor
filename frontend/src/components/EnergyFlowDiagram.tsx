@@ -93,9 +93,9 @@ export function EnergyFlowDiagram({
   // Grid layout: 3 cols x 3 rows, top-aligned so BUILDING matches title distance
   const layout = useMemo(() => {
     const W = dimensions.w;
-    const boxW = 128;
-    const boxH = 92;
-    const gap = 22;
+    const boxW = 120;
+    const boxH = 68;
+    const gap = 18;
     const cellW = boxW + gap;
     const cellH = boxH + gap;
     const cols = 3;
@@ -225,13 +225,13 @@ export function EnergyFlowDiagram({
   });
 
   return (
-    <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4 flex flex-col h-full min-h-0 w-full min-w-0">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1 sm:mb-2 shrink-0">
+    <div className="bg-slate-800/60 rounded-lg p-2 sm:p-3 flex flex-col h-full min-h-0 w-full min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1 shrink-0">
         <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">{t("energyFlow.title")}</div>
         {currentTime && <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">{currentTime}</div>}
       </div>
       <div className="flex-1 flex items-start justify-center min-h-0 min-w-0">
-        <div ref={containerRef} className="relative w-full max-w-full min-w-0 overflow-hidden" style={{ height: "340px", minHeight: "300px" }}>
+        <div ref={containerRef} className="relative w-full max-w-full min-w-0 overflow-hidden" style={{ height: "280px", minHeight: "240px" }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${layout.gridHeight}`} preserveAspectRatio="xMidYMin meet" className="block" style={{ zIndex: 0 }}>
           {/* Grey base lines for all valid connections */}
           {connections.map((conn, i) => {
@@ -268,62 +268,62 @@ export function EnergyFlowDiagram({
         {/* Boxes - on top of connectors (z-index 1) */}
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
           <div className="absolute pointer-events-auto" style={boxStyle(layout.building.x, layout.building.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-slate-700 rounded-lg p-2.5 border-2 border-slate-600 flex flex-col justify-center overflow-hidden shadow-lg">
+            <div className="h-full bg-slate-700 rounded-lg px-2 py-1 border-2 border-slate-600 flex flex-col justify-center overflow-hidden shadow-lg gap-0.5">
               <div className="flex items-center gap-1 min-w-0">
-                <span className="text-lg shrink-0">🏢</span>
+                <span className="text-base shrink-0">🏢</span>
                 <span className="text-xs font-semibold text-slate-300 truncate">{t("energyFlow.building")}</span>
               </div>
-              <div className="text-sm font-mono text-slate-300 truncate">{loadKw.toFixed(1)}{loadKw !== 0 ? " kW" : ""}</div>
+              <div className="text-xs font-mono text-slate-300 truncate">{loadKw.toFixed(1)}{loadKw !== 0 ? " kW" : ""}</div>
             </div>
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.grid.x, layout.grid.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-blue-900 rounded-lg p-2.5 border-2 border-blue-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+            <div className="h-full bg-blue-900 rounded-lg px-2 py-1 border-2 border-blue-500/50 flex flex-col justify-center overflow-hidden shadow-lg gap-0.5">
               <div className="flex items-center gap-1 min-w-0">
-                <span className="text-lg shrink-0">⚡</span>
+                <span className="text-base shrink-0">⚡</span>
                 <span className="text-xs font-semibold text-blue-300 truncate">{t("energyFlow.grid")}</span>
               </div>
-              <div className={`text-sm font-mono truncate ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>{gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)}{gridKw !== 0 ? " kW" : ""}</div>
+              <div className={`text-xs font-mono truncate ${gridKw >= 0 ? "text-blue-300" : "text-emerald-300"}`}>{gridKw >= 0 ? "+" : ""}{gridKw.toFixed(1)}{gridKw !== 0 ? " kW" : ""}</div>
             </div>
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.gridMeter.x, layout.gridMeter.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-red-900 rounded-lg p-2.5 border-2 border-red-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+            <div className="h-full bg-red-900 rounded-lg px-2 py-1 border-2 border-red-500/50 flex flex-col justify-center overflow-hidden shadow-lg gap-0.5">
               <div className="flex items-center gap-1 min-w-0">
-                <span className="text-lg shrink-0">📊</span>
+                <span className="text-base shrink-0">📊</span>
                 <span className="text-xs font-semibold text-red-300 truncate">{t("energyFlow.gateway")}</span>
               </div>
-              <div className="text-sm font-mono text-red-300 truncate">{Math.abs(gridKw).toFixed(1)}{Math.abs(gridKw) !== 0 ? " kW" : ""}</div>
+              <div className="text-xs font-mono text-red-300 truncate">{Math.abs(gridKw).toFixed(1)}{Math.abs(gridKw) !== 0 ? " kW" : ""}</div>
             </div>
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.inverter.x, layout.inverter.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-slate-700 rounded-lg p-2.5 border-2 border-slate-500 flex flex-col justify-center overflow-hidden shadow-lg">
+            <div className="h-full bg-slate-700 rounded-lg px-2 py-1 border-2 border-slate-500 flex flex-col justify-center overflow-hidden shadow-lg gap-0.5">
               <div className="flex items-center gap-1 min-w-0">
-                <span className="text-lg shrink-0">🔄</span>
+                <span className="text-base shrink-0">🔄</span>
                 <span className="text-xs font-semibold text-slate-300 truncate">{t("energyFlow.inverter")}</span>
               </div>
-              <div className="text-sm font-mono text-slate-300 truncate">{t("energyFlow.dcAc")}</div>
+              <div className="text-xs font-mono text-slate-300 truncate">{t("energyFlow.dcAc")}</div>
             </div>
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.solar.x, layout.solar.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-amber-900 rounded-lg p-2.5 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+            <div className="h-full bg-amber-900 rounded-lg px-2 py-1 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden shadow-lg gap-0.5">
               <div className="flex items-center gap-1 min-w-0">
-                <span className="text-lg shrink-0">☀️</span>
+                <span className="text-base shrink-0">☀️</span>
                 <span className="text-xs font-semibold text-amber-300 truncate">{t("energyFlow.solar")}</span>
               </div>
-              <div className="text-sm font-mono text-amber-300 truncate">{solarKw.toFixed(1)}{solarKw !== 0 ? " kW" : ""}</div>
+              <div className="text-xs font-mono text-amber-300 truncate">{solarKw.toFixed(1)}{solarKw !== 0 ? " kW" : ""}</div>
             </div>
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.battery.x, layout.battery.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-emerald-900 rounded-lg p-2.5 border-2 border-emerald-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
+            <div className="h-full bg-emerald-900 rounded-lg px-2 py-1 border-2 border-emerald-500/50 flex flex-col justify-center overflow-hidden shadow-lg gap-0.5">
               <div className="flex items-center gap-1 min-w-0">
-                <span className="text-lg shrink-0">🔋</span>
+                <span className="text-base shrink-0">🔋</span>
                 <span className="text-xs font-semibold text-emerald-300 truncate">{t("energyFlow.battery")}</span>
               </div>
-              <div className="text-sm font-mono text-emerald-300 truncate">{batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)}{batteryKw !== 0 ? " kW" : ""}</div>
+              <div className="text-xs font-mono text-emerald-300 truncate">{batteryKw >= 0 ? "+" : ""}{batteryKw.toFixed(1)}{batteryKw !== 0 ? " kW" : ""}</div>
             </div>
           </div>
         </div>

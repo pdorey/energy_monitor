@@ -124,11 +124,11 @@ export function EnergyProfileChart({ data, currentTime }: EnergyProfileChartProp
   };
 
   return (
-    <div className="bg-slate-800/60 rounded-lg p-3 min-h-0 min-w-0 overflow-hidden flex flex-col shrink-0">
+    <div className="bg-slate-800/60 rounded-lg p-3 min-h-0 min-w-0 overflow-hidden flex flex-col h-full">
       <h3 className="text-sm font-semibold text-slate-300 mb-2 shrink-0">
         {t("energyProfile.title")}
       </h3>
-      <div className="w-full h-[180px] shrink-0">
+      <div className="w-full flex-1 min-h-[120px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#475569" />

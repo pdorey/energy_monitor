@@ -62,6 +62,9 @@ export function SolarForecastChart({ data, currentTime }: SolarForecastChartProp
   }
 
   const hourlyToday = getHourlySolar(data);
+  const fullDayTotal = data.length > 0
+    ? data[data.length - 1].cumulative_solar_energy
+    : hourlyToday.reduce((s, x) => s + x.kWh, 0);
   // Total today: cumulative solar up to currentTime (animates as day progresses)
   let totalToday: number;
   if (currentTime && data.length > 0) {
@@ -70,11 +73,10 @@ export function SolarForecastChart({ data, currentTime }: SolarForecastChartProp
     const slotIdx = idx >= 0 ? Math.max(0, idx - 1) : data.length - 1;
     totalToday = data[slotIdx].cumulative_solar_energy;
   } else {
-    totalToday = data.length > 0
-      ? data[data.length - 1].cumulative_solar_energy
-      : hourlyToday.reduce((s, x) => s + x.kWh, 0);
+    totalToday = fullDayTotal;
   }
-  const totalTomorrow = totalToday * 1.02;
+  // Total tomorrow: static forecast (full-day total * 1.02), does not animate
+  const totalTomorrow = fullDayTotal * 1.02;
   const hourlyTomorrow = hourlyToday.map((x) => ({
     ...x,
     kWh: Math.round(x.kWh * 1.02 * 100) / 100,
@@ -98,15 +100,15 @@ export function SolarForecastChart({ data, currentTime }: SolarForecastChartProp
         {t("solarForecast.title")}
       </h3>
       <div className="flex justify-center gap-2 mb-2 shrink-0">
-        <div className="bg-slate-700/50 rounded px-2 py-1 w-[100px] min-w-[100px] text-center shrink-0">
-          <div className="text-[10px] uppercase text-slate-400 leading-tight">{t("solarForecast.totalToday")}</div>
-          <div className="text-sm font-semibold text-amber-300 transition-all duration-300">
+        <div className="bg-slate-700/50 rounded px-2 py-1 w-[130px] min-w-[130px] text-center shrink-0">
+          <div className="text-[10px] uppercase text-slate-400 leading-tight whitespace-nowrap">{t("solarForecast.totalToday")}</div>
+          <div className="text-sm font-semibold text-amber-300 transition-all duration-300 whitespace-nowrap">
             {totalToday.toFixed(2)} <span className="text-xs">kWh</span>
           </div>
         </div>
-        <div className="bg-slate-700/50 rounded px-2 py-1 w-[100px] min-w-[100px] text-center shrink-0">
-          <div className="text-[10px] uppercase text-slate-400 leading-tight">{t("solarForecast.totalTomorrow")}</div>
-          <div className="text-sm font-semibold text-amber-300">
+        <div className="bg-slate-700/50 rounded px-2 py-1 w-[130px] min-w-[130px] text-center shrink-0">
+          <div className="text-[10px] uppercase text-slate-400 leading-tight whitespace-nowrap">{t("solarForecast.totalTomorrow")}</div>
+          <div className="text-sm font-semibold text-amber-300 whitespace-nowrap">
             {totalTomorrow.toFixed(2)} <span className="text-xs">kWh</span>
           </div>
         </div>
