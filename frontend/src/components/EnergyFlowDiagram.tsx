@@ -93,9 +93,9 @@ export function EnergyFlowDiagram({
   // Grid layout: 3 cols x 3 rows, top-aligned so BUILDING matches title distance
   const layout = useMemo(() => {
     const W = dimensions.w;
-    const boxW = 118;
-    const boxH = 84;
-    const gap = 20;
+    const boxW = 128;
+    const boxH = 92;
+    const gap = 22;
     const cellW = boxW + gap;
     const cellH = boxH + gap;
     const cols = 3;
@@ -230,8 +230,8 @@ export function EnergyFlowDiagram({
         <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">{t("energyFlow.title")}</div>
         {currentTime && <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">{currentTime}</div>}
       </div>
-      <div className="flex-1 flex items-start justify-center min-h-0 min-w-0 max-h-[320px]">
-        <div ref={containerRef} className="relative w-full max-w-full min-w-0 overflow-hidden" style={{ height: "280px", minHeight: "240px" }}>
+      <div className="flex-1 flex items-start justify-center min-h-0 min-w-0">
+        <div ref={containerRef} className="relative w-full max-w-full min-w-0 overflow-hidden" style={{ height: "340px", minHeight: "300px" }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${layout.gridHeight}`} preserveAspectRatio="xMidYMin meet" className="block" style={{ zIndex: 0 }}>
           {/* Grey base lines for all valid connections */}
           {connections.map((conn, i) => {

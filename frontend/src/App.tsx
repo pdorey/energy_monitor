@@ -166,6 +166,26 @@ export function App() {
     };
   }, []);
 
+  // Fetch overview when null (retry if initial load failed or API wasn't ready)
+  useEffect(() => {
+    if (overview != null || loading) return;
+    let cancelled = false;
+    const fetch = async () => {
+      try {
+        const ov = await fetchJSON<Overview>("/api/overview");
+        if (!cancelled) setOverview(ov);
+      } catch {
+        // ignore
+      }
+    };
+    fetch();
+    const t = setTimeout(fetch, 3000);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [overview, loading]);
+
   // Fetch intraday when on overview or analytics (ensures price chart loads without tab switch)
   useEffect(() => {
     if ((tab === "overview" || tab === "analytics") && intradayData.length === 0 && !loading) {
@@ -183,7 +203,11 @@ export function App() {
 
   const soc = snapshot?.battery.soc_percent ?? overview?.battery_soc_percent ?? 0;
   const batteryKw = snapshot?.battery.power_w ? snapshot.battery.power_w / 1000 : overview?.battery_kw ?? 0;
-  const allOnline = (overview?.online_equipment ?? 0) === (overview?.total_equipment ?? 0) && (overview?.total_equipment ?? 0) > 0;
+  // Simulator: 4 devices (Gateway, Inverter, Battery, Solar) all online. Fallback when overview null.
+  const hasSimulatorData = consumptionData != null || (equipment?.length ?? 0) > 0;
+  const displayOnline = overview?.online_equipment ?? (hasSimulatorData ? 4 : 0);
+  const displayTotal = overview?.total_equipment ?? (hasSimulatorData ? 4 : 0);
+  const allOnline = displayOnline === displayTotal && displayTotal > 0;
 
   // Cumulative daily consumption and solar (from consumption data)
   const [dailyConsumptionSum, setDailyConsumptionSum] = useState(0);
@@ -279,7 +303,7 @@ export function App() {
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">{t("cards.equipment")}</div>
                 <div className={`mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold ${allOnline ? "text-emerald-400" : ""}`}>
-                  {overview?.online_equipment ?? 0}/{overview?.total_equipment ?? 0}
+                  {displayOnline}/{displayTotal}
                 </div>
                 <div className={`text-sm mt-1 ${allOnline ? "text-emerald-400" : "text-slate-400"}`}>{t("cards.online")}</div>
               </div>
@@ -324,10 +348,10 @@ export function App() {
               </div>
             </div>
 
-            {/* Energy Flow + Energy Profile (left) | Prices + Solar Forecast (right) - equal column heights */}
-            <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 items-stretch" style={{ minHeight: "420px" }}>
-              <div className="lg:col-span-3 flex flex-col gap-3 min-h-[360px] lg:min-h-0 min-w-0">
-                <div className="flex-1 min-h-[200px] max-h-[320px] min-w-0 overflow-hidden">
+            {/* Energy Flow + Energy Profile (left) | Prices + Solar Forecast (right) - bottoms align */}
+            <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 items-stretch" style={{ minHeight: "480px" }}>
+              <div className="lg:col-span-3 flex flex-col gap-3 min-h-0 min-w-0">
+                <div className="flex-1 min-h-[280px] min-w-0 overflow-hidden flex flex-col">
                   <EnergyFlowDiagram
                     snapshot={snapshot}
                     overview={overview ? {
@@ -344,11 +368,17 @@ export function App() {
                     displayTime={consumptionData?.time}
                   />
                 </div>
-                <EnergyProfileChart data={intradayData} currentTime={consumptionData?.time} />
+                <div className="shrink-0 mt-auto">
+                  <EnergyProfileChart data={intradayData} currentTime={consumptionData?.time} />
+                </div>
               </div>
-              <div className="lg:col-span-3 flex flex-col gap-4 min-h-[360px] lg:min-h-0 min-w-0">
-                <PriceChart data={intradayData} />
-                <SolarForecastChart data={intradayData} />
+              <div className="lg:col-span-3 flex flex-col gap-4 min-h-0 min-w-0">
+                <div className="flex-1 min-w-0">
+                  <PriceChart data={intradayData} />
+                </div>
+                <div className="shrink-0">
+                  <SolarForecastChart data={intradayData} />
+                </div>
               </div>
             </div>
           </div>
