@@ -56,6 +56,14 @@
     "buyPrice": "Buy price",
     "exportPrice": "Export price"
   },
+  "energyProfile": {
+    "title": "Energy Profile",
+    "noData": "No energy data",
+    "buildingConsumption": "Building",
+    "gridImport": "Grid",
+    "batteryConsumption": "Battery",
+    "solarProduction": "Solar"
+  },
   "solarForecast": {
     "title": "Solar Forecast for Tomorrow",
     "totalToday": "Total today",

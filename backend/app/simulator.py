@@ -360,11 +360,12 @@ class Simulator:
         return snapshot
 
     def build_overview(self, snapshot: Snapshot, uptime_seconds: int) -> Overview:
-        """Build Overview from snapshot (equipment count, uptime, solar, battery, grid, load)."""
+        """Build Overview from snapshot (equipment count, uptime, solar, battery, grid, load).
+        Simulator: 4 devices (Gateway, Inverter, Battery, Solar) all online."""
         return Overview(
             timestamp=snapshot.timestamp,
-            total_equipment=6,
-            online_equipment=6,
+            total_equipment=4,
+            online_equipment=4,
             uptime_seconds=uptime_seconds,
             solar_kw=snapshot.solar.power_w / 1000.0,
             battery_kw=snapshot.battery.power_w / 1000.0,

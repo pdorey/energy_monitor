@@ -37,13 +37,42 @@ function getSlotBarColor(slotName: string): string {
   return "#64748b";
 }
 
+/** Four-rate weekday slot from minutes-since-midnight (fallback when backend slot_name missing). */
+function getSlotFromMinutes(minutes: number, isWeekend: boolean, isSummer: boolean): string {
+  if (isWeekend) return "super_off_peak";
+  if (minutes < 6 * 60) return "super_off_peak";           // 00:00-06:00
+  if (minutes < 8 * 60) return "off_peak";                 // 06:00-08:00
+  if (isSummer) {
+    if (minutes < 10.5 * 60) return "standard";           // 08:00-10:30
+    if (minutes < 13 * 60) return "peak";                  // 10:30-13:00
+    if (minutes < 19.5 * 60) return "standard";             // 13:00-19:30
+    if (minutes < 21 * 60) return "peak";                   // 19:30-21:00
+    if (minutes < 22 * 60) return "standard";              // 21:00-22:00
+  } else {
+    if (minutes < 9 * 60) return "standard";               // 08:00-09:00
+    if (minutes < 10.5 * 60) return "peak";                // 09:00-10:30
+    if (minutes < 18 * 60) return "standard";              // 10:30-18:00
+    if (minutes < 20.5 * 60) return "peak";                // 18:00-20:30
+    if (minutes < 22 * 60) return "standard";               // 20:30-22:00
+  }
+  return "off_peak";                                       // 22:00-24:00
+}
+
+function parseTimeToMinutes(timeStr: string): number {
+  const [h, m] = (timeStr || "00:00").split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
 export function PriceChart({ data }: PriceChartProps) {
   const { t } = useTranslation();
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const dataPoint = payload[0]?.payload;
+      const slotName = dataPoint?.slot_name ?? "—";
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 shadow-lg">
           <p className="text-slate-300 mb-2 font-semibold">{`${t("priceChart.time")}: ${label}`}</p>
+          <p className="text-xs text-slate-400 mb-2">Slot: {slotName}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {`${entry.name}: ${typeof entry.value === "number" && !isNaN(entry.value) ? entry.value.toFixed(2) : "—"} €/MWh`}
@@ -63,11 +92,14 @@ export function PriceChart({ data }: PriceChartProps) {
     );
   }
 
-  // Precompute bar fill per slot so Recharts shape receives it via props
-  const chartData = data.map((d) => ({
-    ...d,
-    _barFill: getSlotBarColor(d.slot_name ?? ""),
-  }));
+  // Precompute bar fill per slot. Use backend slot_name if present, else derive from time (four_rate).
+  const now = new Date();
+  const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+  const isSummer = now.getMonth() >= 3 && now.getMonth() <= 9; // Apr-Oct
+  const chartData = data.map((d) => {
+    const slotName = d.slot_name ?? getSlotFromMinutes(parseTimeToMinutes(d.time), isWeekend, isSummer);
+    return { ...d, slot_name: slotName, _barFill: getSlotBarColor(slotName) };
+  });
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-4 min-h-[200px] min-w-0 overflow-hidden">
@@ -100,9 +132,11 @@ export function PriceChart({ data }: PriceChartProps) {
               fill="#64748b"
               radius={[2, 2, 0, 0]}
               shape={(props: unknown) => {
-                const p = props as { x?: number; y?: number; width?: number; height?: number; _barFill?: string };
-                const { x = 0, y = 0, width = 0, height = 0, _barFill = "#64748b" } = p;
-                return <Rectangle x={x} y={y} width={width} height={height} fill={_barFill} radius={[2, 2, 0, 0]} />;
+                const p = props as { x?: number; y?: number; width?: number; height?: number; payload?: { slot_name?: string; _barFill?: string }; slot_name?: string; _barFill?: string };
+                const { x = 0, y = 0, width = 0, height = 0 } = p;
+                const payload = p.payload ?? p;
+                const fill = payload._barFill ?? getSlotBarColor(payload.slot_name ?? "");
+                return <Rectangle x={x} y={y} width={width} height={height} fill={fill} radius={[2, 2, 0, 0]} />;
               }}
             />
             <Line

@@ -6,6 +6,7 @@ import { EnergyFlowDiagram } from "./components/EnergyFlowDiagram";
 import { AnalyticsCharts } from "./components/AnalyticsCharts";
 import { PriceChart } from "./components/PriceChart";
 import { SolarForecastChart } from "./components/SolarForecastChart";
+import { EnergyProfileChart } from "./components/EnergyProfileChart";
 
 interface Overview {
   timestamp: string;
@@ -323,26 +324,29 @@ export function App() {
               </div>
             </div>
 
-            {/* Energy Flow (left 3 cols) + Charts (right 3 cols) - same width as 6 cards above */}
-            <div className="grid grid-cols-1 lg:grid-cols-6 gap-4" style={{ minHeight: "400px" }}>
-              <div className="lg:col-span-3 min-h-[320px] lg:min-h-0 flex w-full min-w-0">
-                <EnergyFlowDiagram
-                  snapshot={snapshot}
-                  overview={overview ? {
-                    solar_kw: overview.solar_kw,
-                    battery_kw: overview.battery_kw,
-                    grid_kw: overview.grid_kw,
-                    load_kw: overview.load_kw,
-                    battery_soc_percent: overview.battery_soc_percent,
-                    timestamp: overview.timestamp,
-                  } : null}
-                  activePaths={consumptionData?.active_paths}
-                  pathDefinitions={consumptionData?.path_definitions}
-                  validConnections={consumptionData?.valid_connections}
-                  displayTime={consumptionData?.time}
-                />
+            {/* Energy Flow + Energy Profile (left) | Prices + Solar Forecast (right) - equal column heights */}
+            <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 items-stretch" style={{ minHeight: "420px" }}>
+              <div className="lg:col-span-3 flex flex-col gap-3 min-h-[360px] lg:min-h-0 min-w-0">
+                <div className="flex-1 min-h-[220px] min-w-0 overflow-hidden">
+                  <EnergyFlowDiagram
+                    snapshot={snapshot}
+                    overview={overview ? {
+                      solar_kw: overview.solar_kw,
+                      battery_kw: overview.battery_kw,
+                      grid_kw: overview.grid_kw,
+                      load_kw: overview.load_kw,
+                      battery_soc_percent: overview.battery_soc_percent,
+                      timestamp: overview.timestamp,
+                    } : null}
+                    activePaths={consumptionData?.active_paths}
+                    pathDefinitions={consumptionData?.path_definitions}
+                    validConnections={consumptionData?.valid_connections}
+                    displayTime={consumptionData?.time}
+                  />
+                </div>
+                <EnergyProfileChart data={intradayData} currentTime={consumptionData?.time} />
               </div>
-              <div className="lg:col-span-3 flex flex-col gap-4 min-h-[320px] lg:min-h-0">
+              <div className="lg:col-span-3 flex flex-col gap-4 min-h-[360px] lg:min-h-0 min-w-0">
                 <PriceChart data={intradayData} />
                 <SolarForecastChart data={intradayData} />
               </div>
