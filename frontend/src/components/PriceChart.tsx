@@ -63,6 +63,12 @@ export function PriceChart({ data }: PriceChartProps) {
     );
   }
 
+  // Precompute bar fill per slot so Recharts shape receives it via props
+  const chartData = data.map((d) => ({
+    ...d,
+    _barFill: getSlotBarColor(d.slot_name ?? ""),
+  }));
+
   return (
     <div className="bg-slate-800/60 rounded-lg p-4 min-h-[200px] min-w-0 overflow-hidden">
       <h3 className="text-base font-semibold text-slate-300 mb-1">
@@ -73,7 +79,7 @@ export function PriceChart({ data }: PriceChartProps) {
       </p>
       <div className="w-full h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+          <ComposedChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
             <XAxis
               dataKey="time"
@@ -94,12 +100,9 @@ export function PriceChart({ data }: PriceChartProps) {
               fill="#64748b"
               radius={[2, 2, 0, 0]}
               shape={(props: unknown) => {
-                const p = props as { x?: number; y?: number; width?: number; height?: number; index?: number };
-                const { x = 0, y = 0, width = 0, height = 0, index = 0 } = p;
-                const entry = data[index];
-                const slotName = entry?.slot_name ?? "";
-                const fill = getSlotBarColor(slotName);
-                return <Rectangle x={x} y={y} width={width} height={height} fill={fill} radius={[2, 2, 0, 0]} />;
+                const p = props as { x?: number; y?: number; width?: number; height?: number; _barFill?: string };
+                const { x = 0, y = 0, width = 0, height = 0, _barFill = "#64748b" } = p;
+                return <Rectangle x={x} y={y} width={width} height={height} fill={_barFill} radius={[2, 2, 0, 0]} />;
               }}
             />
             <Line
