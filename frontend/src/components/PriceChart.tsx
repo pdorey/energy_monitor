@@ -94,9 +94,11 @@ export function PriceChart({ data }: PriceChartProps) {
               fill="#64748b"
               radius={[2, 2, 0, 0]}
               shape={(props: unknown) => {
-                const p = props as { x?: number; y?: number; width?: number; height?: number; payload?: { slot_name?: string } };
-                const { x = 0, y = 0, width = 0, height = 0, payload } = p;
-                const fill = getSlotBarColor(payload?.slot_name || "");
+                const p = props as { x?: number; y?: number; width?: number; height?: number; index?: number };
+                const { x = 0, y = 0, width = 0, height = 0, index = 0 } = p;
+                const entry = data[index];
+                const slotName = entry?.slot_name ?? "";
+                const fill = getSlotBarColor(slotName);
                 return <Rectangle x={x} y={y} width={width} height={height} fill={fill} radius={[2, 2, 0, 0]} />;
               }}
             />
