@@ -356,10 +356,15 @@ async def get_consumption_data():
 
     Uses simulator's current row so values, paths and timestamps stay in sync.
     Returns building_kw, grid_kw, solar_kw, path_definitions, valid_connections, prices.
+    Advances simulator slot when called so PRICES card and time stay in sync with poll.
     """
     try:
         if not sim:
             return {"error": "Simulator not initialized"}
+
+        # Advance simulator when no WebSocket clients (broadcast_loop advances when clients exist)
+        if not clients:
+            sim.generate_snapshot()
 
         # Ask simulator which row is current so we stay perfectly in sync
         raw_row = sim.get_current_row()  # type: ignore[attr-defined]
@@ -588,18 +593,17 @@ async def ws_live(websocket: WebSocket):
 
 
 async def broadcast_loop():
-    """Every 2s advance simulator and broadcast snapshot to all connected WebSocket clients."""
+    """Every 2s advance simulator and broadcast snapshot to all connected WebSocket clients.
+    Slot advances from consumption-data API when no WebSocket clients (so PRICES card updates)."""
     while True:
         await asyncio.sleep(2)
         if not sim:
             continue
 
-        # Always advance the simulator so CSV‑driven time and values move forward
-        # even if there are no connected WebSocket clients.
-        snap = sim.generate_snapshot()
-
+        # Advance only when we have clients; otherwise consumption-data API advances on poll
         if not clients:
             continue
+        snap = sim.generate_snapshot()
 
         payload = json.dumps(
             {"type": "snapshot", "data": json.loads(Snapshot.model_validate(snap).model_dump_json())}
