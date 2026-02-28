@@ -75,14 +75,14 @@ export function EnergyFlowDiagram({
   const loadKw = snapshot?.load.power_w ? snapshot.load.power_w / 1000 : overview?.load_kw ?? 0;
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ w: 520, h: 380 });
+  const [dimensions, setDimensions] = useState({ w: 520, h: 300 });
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const update = () => {
       const rect = el.getBoundingClientRect();
-      setDimensions({ w: Math.max(280, rect.width), h: Math.max(280, rect.height) });
+      setDimensions({ w: Math.max(280, rect.width), h: Math.max(220, rect.height) });
     };
     update();
     const ro = new ResizeObserver(update);
@@ -90,21 +90,18 @@ export function EnergyFlowDiagram({
     return () => ro.disconnect();
   }, []);
 
-  // Grid layout: 3 cols x 3 rows, equal spacing, larger boxes
+  // Grid layout: 3 cols x 3 rows, compact spacing, top-aligned so BUILDING matches title distance
   const layout = useMemo(() => {
     const W = dimensions.w;
-    const H = dimensions.h;
-    const boxW = 110;
-    const boxH = 72;
-    const gap = 24;
+    const boxW = 100;
+    const boxH = 60;
+    const gap = 16;
     const cellW = boxW + gap;
     const cellH = boxH + gap;
     const cols = 3;
-    const rows = 3;
     const gridW = cols * cellW - gap;
-    const gridH = rows * cellH - gap;
     const offsetX = (W - gridW) / 2 + cellW / 2;
-    const offsetY = (H - gridH) / 2 + cellH / 2;
+    const offsetY = cellH / 2; // Top-align: BUILDING row 0 same distance from top as title
 
     const cell = (col: number, row: number) => ({
       x: offsetX + col * cellW,
@@ -226,14 +223,14 @@ export function EnergyFlowDiagram({
   });
 
   return (
-    <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 flex flex-col h-full min-h-0 w-full min-w-0">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4 shrink-0">
+    <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4 flex flex-col h-full min-h-0 w-full min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1 sm:mb-2 shrink-0">
         <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">{t("energyFlow.title")}</div>
         {currentTime && <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">{currentTime}</div>}
       </div>
-      <div className="flex-1 flex items-center justify-center min-h-0 min-w-0">
-        <div ref={containerRef} className="relative w-full max-w-full min-w-0 overflow-hidden" style={{ aspectRatio: "4/3", minHeight: "280px" }}>
-        <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${dimensions.h}`} preserveAspectRatio="xMidYMid meet" className="block" style={{ zIndex: 0 }}>
+      <div className="flex-1 flex items-start justify-center min-h-0 min-w-0">
+        <div ref={containerRef} className="relative w-full max-w-full min-w-0 overflow-hidden" style={{ aspectRatio: "4/3", minHeight: "200px" }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${dimensions.h}`} preserveAspectRatio="xMidYMin meet" className="block" style={{ zIndex: 0 }}>
           {/* Grey base lines for all valid connections */}
           {connections.map((conn, i) => {
             const { from, to, verticalFirst } = getConnectionEndpoints(conn.from, conn.to);
