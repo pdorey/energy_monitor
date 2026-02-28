@@ -327,7 +327,7 @@ export function App() {
             {/* Energy Flow + Energy Profile (left) | Prices + Solar Forecast (right) - equal column heights */}
             <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 items-stretch" style={{ minHeight: "420px" }}>
               <div className="lg:col-span-3 flex flex-col gap-3 min-h-[360px] lg:min-h-0 min-w-0">
-                <div className="flex-1 min-h-[220px] min-w-0 overflow-hidden">
+                <div className="flex-1 min-h-[180px] max-h-[260px] min-w-0 overflow-hidden">
                   <EnergyFlowDiagram
                     snapshot={snapshot}
                     overview={overview ? {
