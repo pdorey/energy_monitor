@@ -93,9 +93,9 @@ export function EnergyFlowDiagram({
   // Grid layout: 3 cols x 3 rows, top-aligned so BUILDING matches title distance
   const layout = useMemo(() => {
     const W = dimensions.w;
-    const boxW = 108;
-    const boxH = 76;
-    const gap = 18;
+    const boxW = 118;
+    const boxH = 84;
+    const gap = 20;
     const cellW = boxW + gap;
     const cellH = boxH + gap;
     const cols = 3;
@@ -230,8 +230,8 @@ export function EnergyFlowDiagram({
         <div className="text-sm sm:text-base font-semibold uppercase text-slate-300">{t("energyFlow.title")}</div>
         {currentTime && <div className="text-sm sm:text-base font-semibold text-slate-300 font-mono">{currentTime}</div>}
       </div>
-      <div className="flex-1 flex items-start justify-center min-h-0 min-w-0 max-h-[240px]">
-        <div ref={containerRef} className="relative w-full max-w-full min-w-0 overflow-hidden" style={{ height: "220px", minHeight: "200px" }}>
+      <div className="flex-1 flex items-start justify-center min-h-0 min-w-0 max-h-[320px]">
+        <div ref={containerRef} className="relative w-full max-w-full min-w-0 overflow-hidden" style={{ height: "280px", minHeight: "240px" }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.w} ${layout.gridHeight}`} preserveAspectRatio="xMidYMin meet" className="block" style={{ zIndex: 0 }}>
           {/* Grey base lines for all valid connections */}
           {connections.map((conn, i) => {
@@ -268,7 +268,7 @@ export function EnergyFlowDiagram({
         {/* Boxes - on top of connectors (z-index 1) */}
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
           <div className="absolute pointer-events-auto" style={boxStyle(layout.building.x, layout.building.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-slate-700 rounded-lg p-2 border-2 border-slate-600 flex flex-col justify-center overflow-visible shadow-lg">
+            <div className="h-full bg-slate-700 rounded-lg p-2.5 border-2 border-slate-600 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">🏢</span>
                 <span className="text-xs font-semibold text-slate-300 truncate">{t("energyFlow.building")}</span>
@@ -278,7 +278,7 @@ export function EnergyFlowDiagram({
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.grid.x, layout.grid.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-blue-900 rounded-lg p-2 border-2 border-blue-500/50 flex flex-col justify-center overflow-visible shadow-lg">
+            <div className="h-full bg-blue-900 rounded-lg p-2.5 border-2 border-blue-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">⚡</span>
                 <span className="text-xs font-semibold text-blue-300 truncate">{t("energyFlow.grid")}</span>
@@ -288,7 +288,7 @@ export function EnergyFlowDiagram({
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.gridMeter.x, layout.gridMeter.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-red-900 rounded-lg p-2 border-2 border-red-500/50 flex flex-col justify-center overflow-visible shadow-lg">
+            <div className="h-full bg-red-900 rounded-lg p-2.5 border-2 border-red-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">📊</span>
                 <span className="text-xs font-semibold text-red-300 truncate">{t("energyFlow.gateway")}</span>
@@ -298,7 +298,7 @@ export function EnergyFlowDiagram({
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.inverter.x, layout.inverter.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-slate-700 rounded-lg p-2 border-2 border-slate-500 flex flex-col justify-center overflow-visible shadow-lg">
+            <div className="h-full bg-slate-700 rounded-lg p-2.5 border-2 border-slate-500 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">🔄</span>
                 <span className="text-xs font-semibold text-slate-300 truncate">{t("energyFlow.inverter")}</span>
@@ -308,7 +308,7 @@ export function EnergyFlowDiagram({
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.solar.x, layout.solar.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-amber-900 rounded-lg p-2 border-2 border-amber-500/50 flex flex-col justify-center overflow-visible shadow-lg">
+            <div className="h-full bg-amber-900 rounded-lg p-2.5 border-2 border-amber-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">☀️</span>
                 <span className="text-xs font-semibold text-amber-300 truncate">{t("energyFlow.solar")}</span>
@@ -318,7 +318,7 @@ export function EnergyFlowDiagram({
           </div>
 
           <div className="absolute pointer-events-auto" style={boxStyle(layout.battery.x, layout.battery.y, layout.boxW, layout.boxH)}>
-            <div className="h-full bg-emerald-900 rounded-lg p-2 border-2 border-emerald-500/50 flex flex-col justify-center overflow-visible shadow-lg">
+            <div className="h-full bg-emerald-900 rounded-lg p-2.5 border-2 border-emerald-500/50 flex flex-col justify-center overflow-hidden shadow-lg">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-lg shrink-0">🔋</span>
                 <span className="text-xs font-semibold text-emerald-300 truncate">{t("energyFlow.battery")}</span>

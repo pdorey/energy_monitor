@@ -280,6 +280,8 @@ async def get_intraday_analytics():
         tariff_type = settings.get("tariff_type", "three_rate")
         now = datetime.now(timezone.utc)
         today = now.date()
+        # Use simulator's day_of_week so slot colors match tariff card (weekday vs weekend)
+        day_of_week, _, _ = sim.get_current_slot_info()
 
         for i, row in enumerate(rows):
             time_value = (row.get("TIME") or "").strip()
@@ -305,7 +307,6 @@ async def get_intraday_analytics():
                 minute = (i % 4) * 15
                 ts = datetime.combine(today, time(hour, minute, 0), tzinfo=timezone.utc)
                 season = grid_tariff.get_season(ts)
-                day_of_week = grid_tariff.get_day_of_week(ts, repo)
                 slot_name = repo.get_slot_name(
                     tariff_type, settings.get("voltage_level", "medium_voltage"),
                     season, day_of_week, hour, minute
