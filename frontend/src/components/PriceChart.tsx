@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Cell,
+  Rectangle,
 } from "recharts";
 
 export interface PriceDataPoint {
@@ -88,11 +88,18 @@ export function PriceChart({ data }: PriceChartProps) {
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ color: "#94a3b8" }} iconType="line" />
-            <Bar dataKey="spot_price" name={t("priceChart.wholesale")} fill="#64748b" radius={[2, 2, 0, 0]}>
-              {data.map((entry, index) => (
-                <Cell key={index} fill={getSlotBarColor(entry.slot_name || "")} />
-              ))}
-            </Bar>
+            <Bar
+              dataKey="spot_price"
+              name={t("priceChart.wholesale")}
+              fill="#64748b"
+              radius={[2, 2, 0, 0]}
+              shape={(props: unknown) => {
+                const p = props as { x?: number; y?: number; width?: number; height?: number; payload?: { slot_name?: string } };
+                const { x = 0, y = 0, width = 0, height = 0, payload } = p;
+                const fill = getSlotBarColor(payload?.slot_name || "");
+                return <Rectangle x={x} y={y} width={width} height={height} fill={fill} radius={[2, 2, 0, 0]} />;
+              }}
+            />
             <Line
               type="monotone"
               dataKey="buy_price"
