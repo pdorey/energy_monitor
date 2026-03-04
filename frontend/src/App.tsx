@@ -261,22 +261,6 @@ export function App() {
     }
   }, [consumptionData?.building_consumption, consumptionData?.solar_production, consumptionData?.time]);
 
-  const getTariffColor = (tariffValue: string, isExport: boolean) => {
-    const t = (tariffValue || "").toLowerCase();
-    if (isExport) {
-      if (t.includes("super low")) return "text-red-300";
-      if (t.includes("low")) return "text-orange-300";
-      if (t.includes("mid")) return "text-yellow-300";
-      if (t.includes("peak")) return "text-green-300";
-    } else {
-      if (t.includes("super low")) return "text-green-300";
-      if (t.includes("low")) return "text-yellow-300";
-      if (t.includes("mid")) return "text-orange-300";
-      if (t.includes("peak")) return "text-red-300";
-    }
-    return "text-slate-300";
-  };
-
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-10">
