@@ -320,8 +320,8 @@ export function App() {
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">{t("cards.tariff")}</div>
-                <div className="mt-1 sm:mt-2 flex items-center justify-between gap-2">
-                  <div className="text-sm sm:text-base font-medium text-slate-300 capitalize">
+                <div className="mt-1 sm:mt-2 flex items-center justify-between gap-1 min-w-0">
+                  <div className="text-xs font-medium text-slate-300 capitalize truncate min-w-0">
                     {t(`tariff.${dayOverride}`)} · {consumptionData?.season ? t(`tariff.${consumptionData.season}`) : "—"}
                   </div>
                   <button
@@ -331,7 +331,7 @@ export function App() {
                     aria-label={t("cards.cycleDay")}
                     title={t("cards.cycleDay")}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                       <path d="M3 3v5h5" />
                       <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
@@ -339,7 +339,7 @@ export function App() {
                     </svg>
                   </button>
                 </div>
-                <div className={`mt-0.5 text-lg sm:text-xl font-semibold ${getSlotColor(consumptionData?.slot_name ?? "")}`}>
+                <div className={`text-sm mt-1 ${getSlotColor(consumptionData?.slot_name ?? "")}`}>
                   {formatSlotName(consumptionData?.slot_name ?? "", t)}
                 </div>
               </div>
