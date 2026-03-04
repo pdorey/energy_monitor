@@ -6,8 +6,8 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  BarChart,
   Bar,
+  ComposedChart,
   LineChart,
   Line,
   XAxis,
@@ -113,7 +113,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
         </h3>
         <div className="w-full h-[220px] sm:h-[270px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={barData} margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
+            <ComposedChart data={barData} margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
               <XAxis
                 dataKey="time"
@@ -127,12 +127,12 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
                 label={{ value: t("analyticsCharts.energyYAxis"), angle: -90, position: "insideLeft", fill: "#94a3b8" }}
               />
               <Tooltip content={<EnergyTooltip />} />
-              <Legend wrapperStyle={{ color: "#94a3b8" }} iconType="square" />
+              <Legend wrapperStyle={{ color: "#94a3b8" }} />
               <Bar dataKey="cumulative_grid_energy" name={t("analyticsCharts.gridEnergy")} stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
               <Bar dataKey="cumulative_solar_energy" name={t("analyticsCharts.solarEnergy")} stackId="a" fill="#fbbf24" radius={[0, 0, 0, 0]} />
               <Bar dataKey="cumulative_battery_energy" name={t("analyticsCharts.batteryEnergy")} stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="cumulative_building_load" name={t("analyticsCharts.buildingLoad")} stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-            </BarChart>
+              <Line type="monotone" dataKey="cumulative_building_load" name={t("analyticsCharts.buildingLoad")} stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls={false} />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>
