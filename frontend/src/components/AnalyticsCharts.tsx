@@ -1,10 +1,13 @@
 /**
- * Analytics charts: cumulative energy and price timeseries.
- * Supports progressive reveal based on currentTime from simulator.
+ * Analytics charts: cumulative energy (15-min bars) and daily price evolution.
+ * Cumulative Energy: progressive reveal based on currentTime from simulator.
+ * Daily Price: full data (no animation - prices known from previous day).
  */
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  BarChart,
+  Bar,
   LineChart,
   Line,
   XAxis,
@@ -33,71 +36,66 @@ interface AnalyticsChartsProps {
   currentTime?: string; // Current time from simulator (e.g., "12:30")
 }
 
-/** Renders cumulative energy and price charts. Nullifies future values when currentTime set. */
 export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
   const { t } = useTranslation();
-  const [chartData, setChartData] = useState<IntradayDataPoint[]>([]);
+  const [energyData, setEnergyData] = useState<IntradayDataPoint[]>([]);
 
-  // Parse time string (e.g., "12:30") to minutes since midnight
   const timeToMinutes = (timeStr: string): number => {
-    const [hours, minutes] = timeStr.split(":").map(Number);
-    return hours * 60 + minutes;
+    const [hours, minutes] = (timeStr || "00:00").split(":").map(Number);
+    return (hours || 0) * 60 + (minutes || 0);
   };
 
-  // Prepare data: always include all time points for full x-axis, but nullify future values for animation
+  // Cumulative Energy: progressive reveal - only show bars up to currentTime
   useEffect(() => {
     if (data.length === 0) {
-      setChartData([]);
+      setEnergyData([]);
       return;
     }
-
     if (!currentTime) {
-      // If no current time, show all data
-      setChartData(data);
+      setEnergyData(data);
       return;
     }
-
     const currentMinutes = timeToMinutes(currentTime);
-    
-    // Create data array with all time points, but nullify values after current time
-    const fullData: IntradayDataPoint[] = data.map((point) => {
-      const pointMinutes = timeToMinutes(point.time);
-      
-      if (pointMinutes <= currentMinutes) {
-        // Show actual data up to current time
-        return point;
-      } else {
-        // For future times, return null values (lines won't draw but x-axis will show full range)
-        return {
-          time: point.time,
-          cumulative_grid_energy: NaN,
-          cumulative_solar_energy: NaN,
-          cumulative_battery_energy: NaN,
-          cumulative_building_load: NaN,
-          spot_price: NaN,
-          buy_price: NaN,
-          export_price: NaN,
-        };
-      }
+    const masked = data.map((d) => {
+      const pm = timeToMinutes(d.time);
+      if (pm <= currentMinutes) return d;
+      return {
+        ...d,
+        cumulative_grid_energy: 0,
+        cumulative_solar_energy: 0,
+        cumulative_battery_energy: 0,
+        cumulative_building_load: 0,
+      };
     });
-    
-    setChartData(fullData);
-  }, [currentTime, data]);
+    setEnergyData(masked);
+  }, [data, currentTime]);
 
-  // Format time for X-axis
-  const formatTime = (time: string) => {
-    return time;
+  const barData = energyData.length > 0 ? energyData : data;
+
+  const EnergyTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 shadow-lg">
+          <p className="text-slate-300 mb-2 font-semibold">{`${t("priceChart.time")}: ${label}`}</p>
+              {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {`${entry.name}: ${(entry.value ?? 0).toFixed(2)} kWh`}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
   };
 
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const PriceTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 shadow-lg">
           <p className="text-slate-300 mb-2 font-semibold">{`${t("priceChart.time")}: ${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {`${entry.name}: ${entry.value.toFixed(2)} ${entry.dataKey.includes("price") ? "€/MWh" : "kWh"}`}
+              {`${entry.name}: ${(entry.value ?? 0).toFixed(2)} €/MWh`}
             </p>
           ))}
         </div>
@@ -108,142 +106,64 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Chart 1: Cumulative Energy Consumption */}
+      {/* Chart 1: Cumulative Energy Consumption - 15-min interval stacked bars */}
       <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 min-w-0 overflow-hidden">
         <h3 className="text-base sm:text-lg font-semibold text-slate-300 mb-3 sm:mb-4">
           {t("analyticsCharts.consumptionTitle")}
         </h3>
         <div className="w-full h-[220px] sm:h-[270px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData.length > 0 ? chartData : data} margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-            <XAxis
-              dataKey="time"
-              stroke="#94a3b8"
-              tick={{ fill: "#94a3b8", fontSize: 10 }}
-              tickFormatter={formatTime}
-              domain={['dataMin', 'dataMax']}
-            />
-            <YAxis
-              stroke="#94a3b8"
-              tick={{ fill: "#94a3b8", fontSize: 10 }}
-              label={{ value: t("analyticsCharts.energyYAxis"), angle: -90, position: "insideLeft", fill: "#94a3b8" }}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend
-              wrapperStyle={{ color: "#94a3b8" }}
-              iconType="line"
-            />
-            <Line
-              type="monotone"
-              dataKey="cumulative_grid_energy"
-              name={t("analyticsCharts.gridEnergy")}
-              stroke="#ef4444"
-              strokeWidth={2}
-              dot={false}
-              animationDuration={500}
-              isAnimationActive={true}
-              connectNulls={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="cumulative_solar_energy"
-              name={t("analyticsCharts.solarEnergy")}
-              stroke="#fbbf24"
-              strokeWidth={2}
-              dot={false}
-              animationDuration={500}
-              isAnimationActive={true}
-              connectNulls={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="cumulative_battery_energy"
-              name={t("analyticsCharts.batteryEnergy")}
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={false}
-              animationDuration={500}
-              isAnimationActive={true}
-              connectNulls={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="cumulative_building_load"
-              name={t("analyticsCharts.buildingLoad")}
-              stroke="#3b82f6"
-              strokeWidth={2}
-              dot={false}
-              animationDuration={500}
-              isAnimationActive={true}
-              connectNulls={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={barData} margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+              <XAxis
+                dataKey="time"
+                stroke="#94a3b8"
+                tick={{ fill: "#94a3b8", fontSize: 9 }}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                stroke="#94a3b8"
+                tick={{ fill: "#94a3b8", fontSize: 10 }}
+                label={{ value: t("analyticsCharts.energyYAxis"), angle: -90, position: "insideLeft", fill: "#94a3b8" }}
+              />
+              <Tooltip content={<EnergyTooltip />} />
+              <Legend wrapperStyle={{ color: "#94a3b8" }} iconType="square" />
+              <Bar dataKey="cumulative_grid_energy" name={t("analyticsCharts.gridEnergy")} stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="cumulative_solar_energy" name={t("analyticsCharts.solarEnergy")} stackId="a" fill="#fbbf24" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="cumulative_battery_energy" name={t("analyticsCharts.batteryEnergy")} stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="cumulative_building_load" name={t("analyticsCharts.buildingLoad")} stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Chart 2: Price Evolution */}
+      {/* Chart 2: Daily Price Evolution - full data, no animation */}
       <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 min-w-0 overflow-hidden">
         <h3 className="text-base sm:text-lg font-semibold text-slate-300 mb-3 sm:mb-4">
           {t("analyticsCharts.priceTitle")}
         </h3>
         <div className="w-full h-[220px] sm:h-[270px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData.length > 0 ? chartData : data} margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-            <XAxis
-              dataKey="time"
-              stroke="#94a3b8"
-              tick={{ fill: "#94a3b8", fontSize: 10 }}
-              tickFormatter={formatTime}
-              domain={['dataMin', 'dataMax']}
-            />
-            <YAxis
-              stroke="#94a3b8"
-              tick={{ fill: "#94a3b8", fontSize: 10 }}
-              label={{ value: t("analyticsCharts.priceYAxis"), angle: -90, position: "insideLeft", fill: "#94a3b8" }}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend
-              wrapperStyle={{ color: "#94a3b8" }}
-              iconType="line"
-            />
-            <Line
-              type="monotone"
-              dataKey="spot_price"
-              name={t("analyticsCharts.wholesalePrice")}
-              stroke="#8b5cf6"
-              strokeWidth={2}
-              dot={false}
-              animationDuration={500}
-              isAnimationActive={true}
-              connectNulls={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="buy_price"
-              name={t("analyticsCharts.buyPrice")}
-              stroke="#3b82f6"
-              strokeWidth={2}
-              dot={false}
-              animationDuration={500}
-              isAnimationActive={true}
-              connectNulls={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="export_price"
-              name={t("analyticsCharts.exportPrice")}
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={false}
-              animationDuration={500}
-              isAnimationActive={true}
-              connectNulls={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+              <XAxis
+                dataKey="time"
+                stroke="#94a3b8"
+                tick={{ fill: "#94a3b8", fontSize: 9 }}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                stroke="#94a3b8"
+                tick={{ fill: "#94a3b8", fontSize: 10 }}
+                label={{ value: t("analyticsCharts.priceYAxis"), angle: -90, position: "insideLeft", fill: "#94a3b8" }}
+              />
+              <Tooltip content={<PriceTooltip />} />
+              <Legend wrapperStyle={{ color: "#94a3b8" }} iconType="line" />
+              <Line type="monotone" dataKey="spot_price" name={t("analyticsCharts.wholesalePrice")} stroke="#8b5cf6" strokeWidth={2} dot={false} isAnimationActive={false} />
+              <Line type="monotone" dataKey="buy_price" name={t("analyticsCharts.buyPrice")} stroke="#3b82f6" strokeWidth={2} dot={false} isAnimationActive={false} />
+              <Line type="monotone" dataKey="export_price" name={t("analyticsCharts.exportPrice")} stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

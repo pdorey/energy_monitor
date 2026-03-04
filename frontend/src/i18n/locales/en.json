@@ -49,7 +49,7 @@
     "dcAc": "DC↔AC"
   },
   "priceChart": {
-    "title": "Wholesale, Buy & Export Prices (24h)",
+    "title": "Wholesale, Buy & Export Prices",
     "subtitle": "Buy Price = Wholesale + ERSE access charges",
     "noData": "No price data",
     "time": "Time",

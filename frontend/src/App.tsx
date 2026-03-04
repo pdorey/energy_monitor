@@ -438,14 +438,16 @@ export function App() {
         )}
 
         {!loading && tab === "analytics" && (
-          <div>
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
             {intradayData.length > 0 ? (
-              <AnalyticsCharts
-                data={intradayData}
-                currentTime={consumptionData?.time}
-              />
+              <div className="lg:col-span-4 space-y-4">
+                <AnalyticsCharts
+                  data={intradayData}
+                  currentTime={consumptionData?.time}
+                />
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="lg:col-span-4 space-y-2">
                 {intradayError && (
                   <div className="text-amber-400 text-sm">{intradayError}</div>
                 )}
