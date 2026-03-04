@@ -97,12 +97,15 @@ export function App() {
   const [intradayData, setIntradayData] = useState<any[]>([]);
   const [intradayError, setIntradayError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dayOverride, setDayOverride] = useState<"weekday" | "saturday" | "sunday" | null>(null);
   const { snapshot, status: wsStatus } = useLiveData();
+
+  const dayParams = dayOverride ? { day_of_week: dayOverride } : undefined;
 
   const fetchIntraday = useCallback(async () => {
     try {
       setIntradayError(null);
-      const res = await fetchJSON<{ data?: any[]; error?: string }>("/api/intraday-analytics");
+      const res = await fetchJSON<{ data?: any[]; error?: string }>("/api/intraday-analytics", dayParams);
       if (res.error) {
         setIntradayError(res.error);
         setIntradayData([]);
@@ -113,7 +116,7 @@ export function App() {
       setIntradayError(t("errors.failedAnalytics"));
       setIntradayData([]);
     }
-  }, [t]);
+  }, [t, dayOverride]);
 
   useEffect(() => {
     async function load() {
@@ -143,13 +146,38 @@ export function App() {
     load();
   }, []);
 
+  // Refetch consumption and intraday when day override changes
+  useEffect(() => {
+    if (dayOverride == null) return;
+    const params = { day_of_week: dayOverride };
+    (async () => {
+      try {
+        const [consumption, intraday] = await Promise.all([
+          fetchJSON<ConsumptionData>("/api/consumption-data", params).catch(() => null),
+          fetchJSON<{ data?: any[]; error?: string }>("/api/intraday-analytics", params).catch(() => ({ data: [] as any[] })),
+        ]);
+        if (consumption) setConsumptionData(consumption);
+        const res = intraday as { data?: any[]; error?: string };
+        if (res?.error) {
+          setIntradayError(res.error);
+          setIntradayData([]);
+        } else {
+          setIntradayData(res?.data || []);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, [dayOverride]);
+
   // Periodically refresh consumption/path data so TIME and active paths follow simulated time
   useEffect(() => {
     let timer: number | undefined;
+    const params = dayOverride ? { day_of_week: dayOverride } : undefined;
 
     const poll = async () => {
       try {
-        const data = await fetchJSON<ConsumptionData>("/api/consumption-data");
+        const data = await fetchJSON<ConsumptionData>("/api/consumption-data", params);
         setConsumptionData(data);
       } catch {
         // ignore transient errors
@@ -164,7 +192,7 @@ export function App() {
         window.clearInterval(timer);
       }
     };
-  }, []);
+  }, [dayOverride]);
 
   // Fetch overview when null (retry if initial load failed or API wasn't ready)
   useEffect(() => {
@@ -309,8 +337,28 @@ export function App() {
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">{t("cards.tariff")}</div>
-                <div className="mt-1 sm:mt-2 text-sm sm:text-base font-medium text-slate-300 capitalize">
-                  {consumptionData?.day_of_week ? t(`tariff.${consumptionData.day_of_week}`) : "—"} · {consumptionData?.season ? t(`tariff.${consumptionData.season}`) : "—"}
+                <div className="mt-1 sm:mt-2 flex flex-wrap gap-1">
+                  {(["weekday", "saturday", "sunday"] as const).map((dow) => {
+                    const effective = dayOverride ?? consumptionData?.day_of_week ?? "weekday";
+                    const active = effective === dow;
+                    return (
+                      <button
+                        key={dow}
+                        type="button"
+                        onClick={() => setDayOverride(dow)}
+                        className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                          active
+                            ? "bg-slate-600 text-slate-100 ring-1 ring-slate-500"
+                            : "bg-slate-700/60 text-slate-400 hover:text-slate-300 hover:bg-slate-700"
+                        }`}
+                      >
+                        {t(`tariff.${dow}`)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-1 text-sm text-slate-400">
+                  {consumptionData?.season ? t(`tariff.${consumptionData.season}`) : "—"}
                 </div>
                 <div className={`mt-0.5 text-lg sm:text-xl font-semibold ${getSlotColor(consumptionData?.slot_name ?? "")}`}>
                   {formatSlotName(consumptionData?.slot_name ?? "", t)}
@@ -339,10 +387,10 @@ export function App() {
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">{t("cards.prices")}</div>
-                <div className={`mt-1 sm:mt-2 text-sm sm:text-base font-medium ${getTariffColor(consumptionData?.tariff || "", false)}`}>
+                <div className="mt-1 sm:mt-2 text-sm sm:text-base font-medium text-blue-500">
                   {t("cards.buy")}: {consumptionData?.buy_price !== undefined ? consumptionData.buy_price.toFixed(0) : "—"} €/MWh
                 </div>
-                <div className={`mt-0.5 text-sm sm:text-base font-medium ${getTariffColor(consumptionData?.tariff || "", true)}`}>
+                <div className="mt-0.5 text-sm sm:text-base font-medium text-emerald-500">
                   {t("cards.export")}: {consumptionData?.export_price !== undefined ? consumptionData.export_price.toFixed(0) : "—"} €/MWh
                 </div>
               </div>

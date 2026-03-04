@@ -247,9 +247,19 @@ async def api_equipment():
     return sim.build_equipment(snap)
 
 
+def _date_for_day_of_week(today, day_of_week: str):
+    """Return a date that falls on the given day_of_week (weekday=Mon, saturday=Sat, sunday=Sun)."""
+    target_wd = {"weekday": 0, "saturday": 5, "sunday": 6}.get(day_of_week, 0)
+    days_back = (today.weekday() - target_wd) % 7
+    return today - timedelta(days=days_back)
+
+
 @app.get("/api/intraday-analytics")
-async def get_intraday_analytics():
+async def get_intraday_analytics(day_of_week: str | None = None):
     """Return 24-hour intraday data from Consumption.csv for analytics charts.
+
+    Args:
+        day_of_week: Optional override: weekday|saturday|sunday. If omitted, uses simulator's current day.
 
     Returns:
         Dict with data array: time, cumulative_grid_energy, cumulative_solar_energy,
@@ -280,8 +290,10 @@ async def get_intraday_analytics():
         tariff_type = settings.get("tariff_type", "three_rate")
         now = datetime.now(timezone.utc)
         today = now.date()
-        # Use simulator's day_of_week so slot colors match tariff card (weekday vs weekend)
-        day_of_week, _, _ = sim.get_current_slot_info()
+        # Use override or simulator's day_of_week so slot colors and prices match tariff card
+        sim_dow, _, _ = sim.get_current_slot_info()
+        effective_dow = day_of_week if day_of_week in ("weekday", "saturday", "sunday") else sim_dow
+        sim_date = _date_for_day_of_week(today, effective_dow)
 
         for i, row in enumerate(rows):
             time_value = (row.get("TIME") or "").strip()
@@ -297,7 +309,7 @@ async def get_intraday_analytics():
             cumulative_battery += battery_energy
             cumulative_building += building_consumption
             
-            # Prices: spot in €/MWh from CSV; apply grid tariff formula for buy/export
+            # Prices: use sim_date so compute_buy_export_prices gets correct day (grid_access for sat/sun)
             spot_price = _parse_spot_price_eur_mwh(row)
             buy_price = 0.0
             export_price = 0.0
@@ -305,11 +317,11 @@ async def get_intraday_analytics():
             try:
                 hour = i // 4  # 15-min slot index -> hour (0-23)
                 minute = (i % 4) * 15
-                ts = datetime.combine(today, time(hour, minute, 0), tzinfo=timezone.utc)
+                ts = datetime.combine(sim_date, time(hour, minute, 0), tzinfo=timezone.utc)
                 season = grid_tariff.get_season(ts)
                 slot_name = repo.get_slot_name(
                     tariff_type, settings.get("voltage_level", "medium_voltage"),
-                    season, day_of_week, hour, minute
+                    season, effective_dow, hour, minute
                 ) or "standard"
                 buy_eur_kwh, export_eur_kwh = compute_buy_export_prices(
                     spot_price, ts, tariff_type, repo=repo, site_settings=settings
@@ -351,8 +363,11 @@ async def api_analytics(hours: int = 24, resolution: int = 60):
 
 
 @app.get("/api/consumption-data")
-async def get_consumption_data():
+async def get_consumption_data(day_of_week: str | None = None):
     """Read consumption and path data from CSV, return current row.
+
+    Args:
+        day_of_week: Optional override: weekday|saturday|sunday. If omitted, uses simulator's current day.
 
     Uses simulator's current row so values, paths and timestamps stay in sync.
     Returns building_kw, grid_kw, solar_kw, path_definitions, valid_connections, prices.
@@ -398,26 +413,24 @@ async def get_consumption_data():
         tariff = (row.get("TARIFF") or "").strip()
 
         # Tariff slot and prices: day_of_week, season, slot_name, buy_price, export_price from grid_tariff formula
-        day_of_week = "weekday"
+        sim_dow, hour, minute = sim.get_current_slot_info()  # type: ignore[attr-defined]
+        effective_dow = day_of_week if day_of_week in ("weekday", "saturday", "sunday") else sim_dow
         season = "summer"
         slot_name = "standard"
         buy_price_eur_kwh = 0.0
         export_price_eur_kwh = 0.0
         try:
-            sim_dow, hour, minute = sim.get_current_slot_info()  # type: ignore[attr-defined]
             repo = get_repository()
             settings = repo.get_site_settings()
             tariff_type = settings.get("tariff_type", "three_rate")
             voltage_level = settings.get("voltage_level", "medium_voltage")
-            # Build timestamp for tariff: real date (season) + simulator day_of_week + hour
+            # Build timestamp for tariff: real date (season) + effective day_of_week + hour
             now = datetime.now(timezone.utc)
             today = now.date()
-            target_wd = {"weekday": 0, "saturday": 5, "sunday": 6}[sim_dow]
-            days_back = (today.weekday() - target_wd) % 7
-            sim_date = today - timedelta(days=days_back)
+            sim_date = _date_for_day_of_week(today, effective_dow)
             ts = datetime.combine(sim_date, time(hour, 0, 0), tzinfo=timezone.utc)
             season = grid_tariff.get_season(ts)
-            day_of_week = sim_dow
+            day_of_week = effective_dow
             slot_name = repo.get_slot_name(
                 tariff_type, voltage_level, season, day_of_week, hour, minute
             ) or "standard"
