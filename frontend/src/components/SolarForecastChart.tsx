@@ -99,21 +99,8 @@ export function SolarForecastChart({ data, currentTime }: SolarForecastChartProp
       <h3 className="text-base font-semibold text-slate-300 mb-2 shrink-0">
         {t("solarForecast.title")}
       </h3>
-      <div className="flex justify-center gap-2 mb-2 shrink-0">
-        <div className="bg-slate-700/50 rounded px-2 py-1 w-[130px] min-w-[130px] text-center shrink-0">
-          <div className="text-[10px] uppercase text-slate-400 leading-tight whitespace-nowrap">{t("solarForecast.totalToday")}</div>
-          <div className="text-sm font-semibold text-amber-300 transition-all duration-300 whitespace-nowrap">
-            {totalToday.toFixed(2)} <span className="text-xs">kWh</span>
-          </div>
-        </div>
-        <div className="bg-slate-700/50 rounded px-2 py-1 w-[130px] min-w-[130px] text-center shrink-0">
-          <div className="text-[10px] uppercase text-slate-400 leading-tight whitespace-nowrap">{t("solarForecast.totalTomorrow")}</div>
-          <div className="text-sm font-semibold text-amber-300 whitespace-nowrap">
-            {totalTomorrow.toFixed(2)} <span className="text-xs">kWh</span>
-          </div>
-        </div>
-      </div>
-      <div className="w-full flex-1 min-h-[140px]">
+      <div className="flex-1 flex gap-3 min-h-[140px] min-w-0">
+        <div className="flex-1 min-w-0 min-h-0 h-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={hourlyTomorrow} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
@@ -132,6 +119,21 @@ export function SolarForecastChart({ data, currentTime }: SolarForecastChartProp
             <Bar dataKey="kWh" fill="#f59e0b" radius={[2, 2, 0, 0]} name={t("solarForecast.barName")} />
           </BarChart>
         </ResponsiveContainer>
+        </div>
+        <div className="flex flex-col justify-center gap-2 shrink-0">
+          <div className="bg-slate-700/50 rounded px-2 py-1 w-[130px] min-w-[130px] text-center">
+            <div className="text-[10px] uppercase text-slate-400 leading-tight whitespace-nowrap">{t("solarForecast.totalToday")}</div>
+            <div className="text-sm font-semibold text-amber-300 transition-all duration-300 whitespace-nowrap">
+              {totalToday.toFixed(2)} <span className="text-xs">kWh</span>
+            </div>
+          </div>
+          <div className="bg-slate-700/50 rounded px-2 py-1 w-[130px] min-w-[130px] text-center">
+            <div className="text-[10px] uppercase text-slate-400 leading-tight whitespace-nowrap">{t("solarForecast.totalTomorrow")}</div>
+            <div className="text-sm font-semibold text-amber-300 whitespace-nowrap">
+              {totalTomorrow.toFixed(2)} <span className="text-xs">kWh</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

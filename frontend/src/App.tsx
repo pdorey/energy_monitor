@@ -396,15 +396,15 @@ export function App() {
                   />
                 </div>
                 <div className="flex-1 min-h-[140px] min-w-0 flex flex-col">
-                  <EnergyProfileChart data={intradayData} currentTime={consumptionData?.time} />
+                  <SolarForecastChart data={intradayData} currentTime={consumptionData?.time} />
                 </div>
               </div>
               <div className="lg:col-span-3 flex flex-col gap-2 min-h-0 min-w-0">
                 <div className="flex-1 min-h-0 min-w-0 flex flex-col">
                   <PriceChart data={intradayData} dayOfWeek={dayOverride} />
                 </div>
-                <div className="flex-1 min-h-0 min-w-0 flex flex-col">
-                  <SolarForecastChart data={intradayData} currentTime={consumptionData?.time} />
+                <div className="flex-1 min-h-[140px] min-w-0 flex flex-col">
+                  <EnergyProfileChart data={intradayData} currentTime={consumptionData?.time} />
                 </div>
               </div>
             </div>
