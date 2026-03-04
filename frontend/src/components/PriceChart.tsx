@@ -25,6 +25,8 @@ export interface PriceDataPoint {
 
 interface PriceChartProps {
   data: PriceDataPoint[];
+  /** Day override from tariff toggle: weekday | saturday | sunday. Used for fallback slot when data lacks slot_name. */
+  dayOfWeek?: "weekday" | "saturday" | "sunday" | null;
 }
 
 /** Bar fill color by slot_name: green (super_off_peak), blue (off_peak), orange (standard), red (peak). */
@@ -37,9 +39,20 @@ function getSlotBarColor(slotName: string): string {
   return "#64748b";
 }
 
-/** Four-rate weekday slot from minutes-since-midnight (fallback when backend slot_name missing). */
-function getSlotFromMinutes(minutes: number, isWeekend: boolean, isSummer: boolean): string {
-  if (isWeekend) return "super_off_peak";
+/** Slot from minutes-since-midnight (fallback when backend slot_name missing). Uses ERSE Portugal structure. */
+function getSlotFromMinutes(minutes: number, dayOfWeek: "weekday" | "saturday" | "sunday", isSummer: boolean): string {
+  // Saturday: super_off_peak 02:00-06:00, off_peak + standard (no peak)
+  if (dayOfWeek === "saturday") {
+    if (minutes >= 2 * 60 && minutes < 6 * 60) return "super_off_peak";
+    if ((minutes >= 9.5 * 60 && minutes < 13 * 60) || (minutes >= 18.5 * 60 && minutes < 22 * 60)) return "standard";
+    return "off_peak";
+  }
+  // Sunday: super_off_peak 02:00-06:00, off_peak rest of day
+  if (dayOfWeek === "sunday") {
+    if (minutes >= 2 * 60 && minutes < 6 * 60) return "super_off_peak";
+    return "off_peak";
+  }
+  // Weekday four-rate
   if (minutes < 6 * 60) return "super_off_peak";           // 00:00-06:00
   if (minutes < 8 * 60) return "off_peak";                 // 06:00-08:00
   if (isSummer) {
@@ -63,7 +76,7 @@ function parseTimeToMinutes(timeStr: string): number {
   return (h || 0) * 60 + (m || 0);
 }
 
-export function PriceChart({ data }: PriceChartProps) {
+export function PriceChart({ data, dayOfWeek }: PriceChartProps) {
   const { t } = useTranslation();
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -92,12 +105,17 @@ export function PriceChart({ data }: PriceChartProps) {
     );
   }
 
-  // Precompute bar fill per slot. Use backend slot_name if present, else derive from time (four_rate).
+  // Precompute bar fill per slot. Use backend slot_name if present, else derive from time using dayOfWeek.
   const now = new Date();
-  const isWeekend = now.getDay() === 0 || now.getDay() === 6;
   const isSummer = now.getMonth() >= 3 && now.getMonth() <= 9; // Apr-Oct
+  const effectiveDay: "weekday" | "saturday" | "sunday" = dayOfWeek ?? (() => {
+    const d = now.getDay();
+    if (d === 6) return "saturday";
+    if (d === 0) return "sunday";
+    return "weekday";
+  })();
   const chartData = data.map((d) => {
-    const slotName = d.slot_name ?? getSlotFromMinutes(parseTimeToMinutes(d.time), isWeekend, isSummer);
+    const slotName = d.slot_name ?? getSlotFromMinutes(parseTimeToMinutes(d.time), effectiveDay, isSummer);
     return { ...d, slot_name: slotName, _barFill: getSlotBarColor(slotName) };
   });
 

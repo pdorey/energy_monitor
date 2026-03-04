@@ -24,7 +24,8 @@
     "today": "Today",
     "prices": "Prices",
     "buy": "Buy",
-    "export": "Export"
+    "export": "Export",
+    "cycleDay": "Cycle day (Weekday / Saturday / Sunday)"
   },
   "tariff": {
     "weekday": "Weekday",

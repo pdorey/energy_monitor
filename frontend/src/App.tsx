@@ -97,10 +97,10 @@ export function App() {
   const [intradayData, setIntradayData] = useState<any[]>([]);
   const [intradayError, setIntradayError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dayOverride, setDayOverride] = useState<"weekday" | "saturday" | "sunday" | null>(null);
+  const [dayOverride, setDayOverride] = useState<"weekday" | "saturday" | "sunday">("weekday");
   const { snapshot, status: wsStatus } = useLiveData();
 
-  const dayParams = dayOverride ? { day_of_week: dayOverride } : undefined;
+  const dayParams = { day_of_week: dayOverride };
 
   const fetchIntraday = useCallback(async () => {
     try {
@@ -148,7 +148,6 @@ export function App() {
 
   // Refetch consumption and intraday when day override changes
   useEffect(() => {
-    if (dayOverride == null) return;
     const params = { day_of_week: dayOverride };
     (async () => {
       try {
@@ -173,7 +172,7 @@ export function App() {
   // Periodically refresh consumption/path data so TIME and active paths follow simulated time
   useEffect(() => {
     let timer: number | undefined;
-    const params = dayOverride ? { day_of_week: dayOverride } : undefined;
+    const params = { day_of_week: dayOverride };
 
     const poll = async () => {
       try {
@@ -321,28 +320,24 @@ export function App() {
               </div>
               <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
                 <div className="text-xs uppercase text-slate-400">{t("cards.tariff")}</div>
-                <div className="mt-1 sm:mt-2 flex flex-wrap gap-1">
-                  {(["weekday", "saturday", "sunday"] as const).map((dow) => {
-                    const effective = dayOverride ?? consumptionData?.day_of_week ?? "weekday";
-                    const active = effective === dow;
-                    return (
-                      <button
-                        key={dow}
-                        type="button"
-                        onClick={() => setDayOverride(dow)}
-                        className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                          active
-                            ? "bg-slate-600 text-slate-100 ring-1 ring-slate-500"
-                            : "bg-slate-700/60 text-slate-400 hover:text-slate-300 hover:bg-slate-700"
-                        }`}
-                      >
-                        {t(`tariff.${dow}`)}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-1 text-sm text-slate-400">
-                  {consumptionData?.season ? t(`tariff.${consumptionData.season}`) : "—"}
+                <div className="mt-1 sm:mt-2 flex items-center justify-between gap-2">
+                  <div className="text-sm sm:text-base font-medium text-slate-300 capitalize">
+                    {t(`tariff.${dayOverride}`)} · {consumptionData?.season ? t(`tariff.${consumptionData.season}`) : "—"}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDayOverride((prev) => (prev === "weekday" ? "saturday" : prev === "saturday" ? "sunday" : "weekday"))}
+                    className="p-1 rounded hover:bg-slate-700/80 text-slate-400 hover:text-slate-300 transition-colors shrink-0"
+                    aria-label={t("cards.cycleDay")}
+                    title={t("cards.cycleDay")}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                      <path d="M3 3v5h5" />
+                      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                      <path d="M16 21h5v-5" />
+                    </svg>
+                  </button>
                 </div>
                 <div className={`mt-0.5 text-lg sm:text-xl font-semibold ${getSlotColor(consumptionData?.slot_name ?? "")}`}>
                   {formatSlotName(consumptionData?.slot_name ?? "", t)}
@@ -406,7 +401,7 @@ export function App() {
               </div>
               <div className="lg:col-span-3 flex flex-col gap-2 min-h-0 min-w-0">
                 <div className="flex-1 min-h-0 min-w-0 flex flex-col">
-                  <PriceChart data={intradayData} />
+                  <PriceChart data={intradayData} dayOfWeek={dayOverride} />
                 </div>
                 <div className="flex-1 min-h-0 min-w-0 flex flex-col">
                   <SolarForecastChart data={intradayData} currentTime={consumptionData?.time} />

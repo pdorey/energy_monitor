@@ -24,7 +24,8 @@
     "today": "Hoje",
     "prices": "Preços",
     "buy": "Compra",
-    "export": "Venda"
+    "export": "Venda",
+    "cycleDay": "Alternar dia (Dia útil / Sábado / Domingo)"
   },
   "tariff": {
     "weekday": "Dia útil",
