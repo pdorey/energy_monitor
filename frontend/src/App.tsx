@@ -4,6 +4,7 @@ import { fetchJSON } from "./api/client";
 import { useLiveData } from "./hooks/useLiveData";
 import { EnergyFlowDiagram } from "./components/EnergyFlowDiagram";
 import { AnalyticsCharts } from "./components/AnalyticsCharts";
+import { AnalyticsCostSavingsCard } from "./components/AnalyticsCostSavingsCard";
 import { PriceChart } from "./components/PriceChart";
 import { SolarForecastChart } from "./components/SolarForecastChart";
 import { EnergyProfileChart } from "./components/EnergyProfileChart";
@@ -440,12 +441,17 @@ export function App() {
         {!loading && tab === "analytics" && (
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
             {intradayData.length > 0 ? (
-              <div className="lg:col-span-4 space-y-4">
-                <AnalyticsCharts
-                  data={intradayData}
-                  currentTime={consumptionData?.time}
-                />
-              </div>
+              <>
+                <div className="lg:col-span-4 space-y-4">
+                  <AnalyticsCharts
+                    data={intradayData}
+                    currentTime={consumptionData?.time}
+                  />
+                </div>
+                <div className="lg:col-span-2 space-y-4 flex flex-col items-stretch">
+                  <AnalyticsCostSavingsCard data={intradayData} currentTime={consumptionData?.time} />
+                </div>
+              </>
             ) : (
               <div className="lg:col-span-4 space-y-2">
                 {intradayError && (

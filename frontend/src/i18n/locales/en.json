@@ -72,6 +72,10 @@
     "noData": "No solar data",
     "barName": "Solar (forecast)"
   },
+  "analytics": {
+    "costSavingsToday": "Cost savings today",
+    "costSavingsNoData": "No data"
+  },
   "analyticsCharts": {
     "consumptionTitle": "Cumulative Energy Consumption (24h)",
     "priceTitle": "Daily Price Evolution (24h)",
