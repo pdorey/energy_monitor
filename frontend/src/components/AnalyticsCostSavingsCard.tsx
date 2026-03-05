@@ -100,11 +100,12 @@ function computeBreakdown(data: IntradayPoint[], currentTime?: string): Breakdow
   return result;
 }
 
-function formatEur(value: number): string {
+function formatEur(value: number, decimals = true): string {
   const abs = Math.abs(value);
-  const [int, dec] = abs.toFixed(2).split(".");
+  const str = decimals ? abs.toFixed(2) : Math.round(abs).toString();
+  const [int, dec] = str.split(".");
   const withCommas = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `${value >= 0 ? "" : "−"}€${withCommas}.${dec}`;
+  return `${value >= 0 ? "" : "−"}€${withCommas}${decimals && dec ? `.${dec}` : ""}`;
 }
 
 /** YTD factor: prefilled (Jan 1 to yesterday) = full_day_total * factor. */
@@ -155,27 +156,27 @@ export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSav
       <div className="mt-2 grid grid-cols-[1fr_5rem_5rem] sm:grid-cols-[1fr_6rem_6rem] gap-x-4 gap-y-1 items-baseline">
         <div className="text-slate-400 text-sm">Total</div>
         <div
-          className={`text-xl sm:text-2xl font-semibold transition-all duration-300 text-right ${
+          className={`text-base sm:text-lg font-semibold transition-all duration-300 text-right tabular-nums ${
             todayTotal >= 0 ? "text-emerald-400" : "text-red-400"
           }`}
         >
-          {formatEur(todayTotal)}
+          {formatEur(todayTotal, false)}
         </div>
         <div
-          className={`text-xl sm:text-2xl font-semibold transition-all duration-300 text-right ${
+          className={`text-base sm:text-lg font-semibold transition-all duration-300 text-right tabular-nums ${
             ytdTotal >= 0 ? "text-emerald-400" : "text-red-400"
           }`}
         >
-          {formatEur(ytdTotal)}
+          {formatEur(ytdTotal, false)}
         </div>
       </div>
       {rows.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-1.5">
+        <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-1">
           {rows.map(({ key, label, today, ytd }) => (
-            <div key={key} className="grid grid-cols-[1fr_5rem_5rem] sm:grid-cols-[1fr_6rem_6rem] gap-x-4 items-center text-sm">
-              <span className="text-slate-400">{label}</span>
-              <span className={`text-right tabular-nums ${today >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(today)}</span>
-              <span className={`text-right tabular-nums ${ytd >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(ytd)}</span>
+            <div key={key} className="grid grid-cols-[1fr_5rem_5rem] sm:grid-cols-[1fr_6rem_6rem] gap-x-4 items-center text-xs sm:text-sm min-w-0">
+              <span className="text-slate-400 truncate">{label}</span>
+              <span className={`text-right tabular-nums shrink-0 ${today >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(today)}</span>
+              <span className={`text-right tabular-nums shrink-0 ${ytd >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(ytd)}</span>
             </div>
           ))}
         </div>
