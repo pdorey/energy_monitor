@@ -148,12 +148,12 @@ export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSav
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-      <div className="grid grid-cols-[1fr_auto_auto] gap-x-2 sm:gap-x-3 items-baseline">
+      <div className="grid grid-cols-[1fr_4.5rem_4.5rem] gap-x-3 sm:gap-x-4 items-baseline">
         <div className="text-xs uppercase text-slate-400">{t("analytics.costSavings")}</div>
         <div className="text-xs uppercase text-slate-400 text-right">{t("analytics.today")}</div>
         <div className="text-xs uppercase text-slate-400 text-right">{t("analytics.ytd")}</div>
       </div>
-      <div className="mt-2 grid grid-cols-[1fr_auto_auto] gap-x-2 sm:gap-x-3 gap-y-1 items-baseline">
+      <div className="mt-2 grid grid-cols-[1fr_4.5rem_4.5rem] gap-x-3 sm:gap-x-4 gap-y-1 items-baseline">
         <div className="text-slate-400 text-sm">Total</div>
         <div
           className={`text-base sm:text-lg font-semibold transition-all duration-300 text-right tabular-nums ${
@@ -173,7 +173,7 @@ export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSav
       {rows.length > 0 && (
         <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-1">
           {rows.map(({ key, label, today, ytd }) => (
-            <div key={key} className="grid grid-cols-[1fr_auto_auto] gap-x-2 sm:gap-x-3 items-center text-xs sm:text-sm min-w-0">
+            <div key={key} className="grid grid-cols-[1fr_4.5rem_4.5rem] gap-x-3 sm:gap-x-4 items-center text-xs sm:text-sm min-w-0">
               <span className="text-slate-400">{label}</span>
               <span className={`text-right tabular-nums shrink-0 ${today >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(today)}</span>
               <span className={`text-right tabular-nums shrink-0 ${ytd >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(ytd)}</span>
