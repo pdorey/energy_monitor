@@ -79,7 +79,8 @@
     "costSavingsSolar": "Poupança solar",
     "costSavingsPeakShaving": "Peak shaving",
     "costSavingsOffPeakDischarge": "Descarga fora de vazio",
-    "costSavingsBatteryCharge": "Custo da carga da bateria"
+    "costSavingsBatteryCharge": "Custo da carga da bateria",
+    "costSavingsExportRevenue": "Receita de exportação"
   },
   "analyticsCharts": {
     "consumptionTitle": "Consumo Acumulado de Energia (24h)",
@@ -90,11 +91,6 @@
     "solarEnergy": "Energia Solar",
     "batteryEnergy": "Energia da Bateria",
     "buildingLoad": "Carga do Edifício",
-    "gridToBuilding": "Rede para edifício",
-    "gridToBattery": "Rede para bateria",
-    "solarToBuilding": "Solar para edifício",
-    "solarToBattery": "Solar para bateria",
-    "batteryToBuilding": "Bateria para edifício",
     "wholesalePrice": "Preço Mercado",
     "buyPrice": "Preço Compra",
     "exportPrice": "Preço Venda"

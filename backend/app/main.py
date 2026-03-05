@@ -284,11 +284,6 @@ async def get_intraday_analytics(day_of_week: str | None = None):
         cumulative_solar = 0.0
         cumulative_battery = 0.0
         cumulative_building = 0.0
-        cumulative_grid_to_building = 0.0
-        cumulative_grid_to_battery = 0.0
-        cumulative_solar_to_building = 0.0
-        cumulative_solar_to_battery = 0.0
-        cumulative_battery_to_building = 0.0
 
         repo = get_repository()
         settings = repo.get_site_settings()
@@ -306,27 +301,12 @@ async def get_intraday_analytics(day_of_week: str | None = None):
             # Cumulative energy values (per-slot increments from CSV)
             grid_energy = parse_float("GRID ENERGY", row)
             solar_prod = parse_float("SOLAR PRODUCTION", row)
+            battery_energy = parse_float("BATTERY", row)
             building_consumption = parse_float("BUILDING CONSUMPTION", row)
-            # Derive battery from energy balance: delta_building = delta_grid + delta_solar + delta_battery
-            # BATTERY column is 0 when charging; using balance captures charging from grid correctly
-            battery_energy = building_consumption - grid_energy - solar_prod
             cumulative_grid += grid_energy
             cumulative_solar += solar_prod
             cumulative_battery += battery_energy
             cumulative_building += building_consumption
-
-            # Decompose into grid/solar/battery flows for chart (all positive, distinguishes grid vs solar charging)
-            # When grid < 0 (export): grid_to_building = 0, solar supplies building first
-            grid_to_building = max(0.0, min(grid_energy, building_consumption))
-            solar_to_building = max(0.0, building_consumption - grid_to_building)
-            grid_to_battery = max(0.0, grid_energy - grid_to_building)
-            solar_to_battery = max(0.0, solar_prod - solar_to_building)
-            battery_to_building = max(0.0, battery_energy)
-            cumulative_grid_to_building += grid_to_building
-            cumulative_grid_to_battery += grid_to_battery
-            cumulative_solar_to_building += solar_to_building
-            cumulative_solar_to_battery += solar_to_battery
-            cumulative_battery_to_building += battery_to_building
 
             # Prices: use sim_date so compute_buy_export_prices gets correct day (grid_access for sat/sun)
             spot_price = _parse_spot_price_eur_mwh(row)
@@ -356,11 +336,6 @@ async def get_intraday_analytics(day_of_week: str | None = None):
                 "cumulative_solar_energy": cumulative_solar,
                 "cumulative_battery_energy": cumulative_battery,
                 "cumulative_building_load": cumulative_building,
-                "cumulative_grid_to_building": cumulative_grid_to_building,
-                "cumulative_grid_to_battery": cumulative_grid_to_battery,
-                "cumulative_solar_to_building": cumulative_solar_to_building,
-                "cumulative_solar_to_battery": cumulative_solar_to_battery,
-                "cumulative_battery_to_building": cumulative_battery_to_building,
                 "spot_price": spot_price,
                 "buy_price": buy_price,
                 "export_price": export_price,

@@ -1,6 +1,6 @@
 /**
- * Cost savings today: (cost if all building load from grid) - (actual grid cost).
- * Decomposed into: solar savings, peak shaving, off-peak discharge, battery charge cost.
+ * Cost savings today: (cost if all building load from grid) - (actual grid cost) + export revenue.
+ * Decomposed into: solar savings, peak shaving, off-peak discharge, battery charge cost (grid only), export revenue.
  * Total (large) + breakdown list below, cumulative up to currentTime.
  */
 import { useMemo } from "react";
@@ -13,6 +13,7 @@ interface IntradayPoint {
   cumulative_solar_energy?: number;
   cumulative_battery_energy?: number;
   buy_price: number;
+  export_price?: number;
   slot_name?: string;
 }
 
@@ -27,6 +28,7 @@ interface Breakdown {
   peakShaving: number;
   offPeakDischarge: number;
   batteryChargeCost: number;
+  exportRevenue: number;
 }
 
 function parseTimeToMinutes(timeStr: string): number {
@@ -34,9 +36,9 @@ function parseTimeToMinutes(timeStr: string): number {
   return (h || 0) * 60 + (m || 0);
 }
 
-/** Compute cumulative cost savings and breakdown up to currentTime. buy_price in €/MWh. */
+/** Compute cumulative cost savings and breakdown up to currentTime. Prices in €/MWh. */
 function computeBreakdown(data: IntradayPoint[], currentTime?: string): Breakdown {
-  const result: Breakdown = { total: 0, solar: 0, peakShaving: 0, offPeakDischarge: 0, batteryChargeCost: 0 };
+  const result: Breakdown = { total: 0, solar: 0, peakShaving: 0, offPeakDischarge: 0, batteryChargeCost: 0, exportRevenue: 0 };
   if (!data || data.length < 2) return result;
 
   const currentMin = currentTime != null ? parseTimeToMinutes(currentTime) : 24 * 60;
@@ -53,19 +55,23 @@ function computeBreakdown(data: IntradayPoint[], currentTime?: string): Breakdow
       cumulative_solar_energy: 0,
       cumulative_battery_energy: 0,
     };
+    const deltaGrid = data[i].cumulative_grid_energy - prev.cumulative_grid_energy;
+    const deltaBuilding = data[i].cumulative_building_load - prev.cumulative_building_load;
     const deltaSolar = hasSolar
       ? (data[i].cumulative_solar_energy ?? 0) - (prev.cumulative_solar_energy ?? 0)
       : 0;
-    const deltaBattery = hasBattery
-      ? (data[i].cumulative_battery_energy ?? 0) - (prev.cumulative_battery_energy ?? 0)
-      : 0;
+    // Derive battery from energy balance (BATTERY column is 0 when charging from grid)
+    const deltaBattery = deltaBuilding - deltaGrid - deltaSolar;
 
     const buyPriceEurPerKwh = (data[i].buy_price ?? 0) / 1000;
+    const exportPriceEurPerKwh = (data[i].export_price ?? 0) / 1000;
     const slotName = (data[i].slot_name ?? "").toLowerCase();
 
-    // Total: (deltaBuilding - deltaGrid) * price = (deltaSolar + deltaBattery) * price
-    const slotTotal = (deltaSolar + deltaBattery) * buyPriceEurPerKwh;
-    result.total += slotTotal;
+    // Total: (cost if all from grid) - (grid cost) + export revenue
+    const costIfAllGrid = deltaBuilding * buyPriceEurPerKwh;
+    const gridCost = Math.max(0, deltaGrid) * buyPriceEurPerKwh;
+    const exportRev = Math.max(0, -deltaGrid) * exportPriceEurPerKwh;
+    result.total += costIfAllGrid - gridCost + exportRev;
 
     if (hasSolar && deltaSolar > 0) {
       result.solar += deltaSolar * buyPriceEurPerKwh;
@@ -78,8 +84,13 @@ function computeBreakdown(data: IntradayPoint[], currentTime?: string): Breakdow
           result.offPeakDischarge += deltaBattery * buyPriceEurPerKwh;
         }
       } else if (deltaBattery < 0) {
-        result.batteryChargeCost += deltaBattery * buyPriceEurPerKwh;
+        // Battery charge cost: only when charging from grid (excess grid over building) - stored as negative
+        const gridToBattery = Math.max(0, deltaGrid - deltaBuilding);
+        result.batteryChargeCost -= gridToBattery * buyPriceEurPerKwh;
       }
+    }
+    if (deltaGrid < 0) {
+      result.exportRevenue += -deltaGrid * exportPriceEurPerKwh;
     }
   }
   return result;
@@ -112,6 +123,7 @@ export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSav
     rows.push({ key: "offPeakDischarge", label: t("analytics.costSavingsOffPeakDischarge"), value: breakdown.offPeakDischarge });
     rows.push({ key: "batteryChargeCost", label: t("analytics.costSavingsBatteryCharge"), value: breakdown.batteryChargeCost });
   }
+  rows.push({ key: "exportRevenue", label: t("analytics.costSavingsExportRevenue"), value: breakdown.exportRevenue });
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
