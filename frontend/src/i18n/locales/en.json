@@ -74,7 +74,12 @@
   },
   "analytics": {
     "costSavingsToday": "Cost savings today",
-    "costSavingsNoData": "No data"
+    "costSavingsNoData": "No data",
+    "costSavingsTotal": "Total",
+    "costSavingsSolar": "Solar savings",
+    "costSavingsPeakShaving": "Peak shaving",
+    "costSavingsOffPeakDischarge": "Off-peak discharge",
+    "costSavingsBatteryCharge": "Battery charge cost"
   },
   "analyticsCharts": {
     "consumptionTitle": "Cumulative Energy Consumption (24h)",

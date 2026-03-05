@@ -74,7 +74,12 @@
   },
   "analytics": {
     "costSavingsToday": "Poupança hoje",
-    "costSavingsNoData": "Sem dados"
+    "costSavingsNoData": "Sem dados",
+    "costSavingsTotal": "Total",
+    "costSavingsSolar": "Poupança solar",
+    "costSavingsPeakShaving": "Peak shaving",
+    "costSavingsOffPeakDischarge": "Descarga fora de vazio",
+    "costSavingsBatteryCharge": "Custo da carga da bateria"
   },
   "analyticsCharts": {
     "consumptionTitle": "Consumo Acumulado de Energia (24h)",
