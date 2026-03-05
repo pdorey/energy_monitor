@@ -298,12 +298,13 @@ async def get_intraday_analytics(day_of_week: str | None = None):
         for i, row in enumerate(rows):
             time_value = (row.get("TIME") or "").strip()
             
-            # Cumulative energy values
+            # Cumulative energy values (per-slot increments from CSV)
             grid_energy = parse_float("GRID ENERGY", row)
             solar_prod = parse_float("SOLAR PRODUCTION", row)
-            battery_energy = parse_float("BATTERY", row)
             building_consumption = parse_float("BUILDING CONSUMPTION", row)
-            
+            # Derive battery from energy balance: delta_building = delta_grid + delta_solar + delta_battery
+            # BATTERY column is 0 when charging; using balance captures charging from grid correctly
+            battery_energy = building_consumption - grid_energy - solar_prod
             cumulative_grid += grid_energy
             cumulative_solar += solar_prod
             cumulative_battery += battery_energy
