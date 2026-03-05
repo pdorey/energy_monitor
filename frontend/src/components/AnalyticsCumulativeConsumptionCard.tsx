@@ -65,22 +65,22 @@ export function AnalyticsCumulativeConsumptionCard({ data, currentTime }: Analyt
     );
   }
 
-  const rows: { key: string; label: string; value: number }[] = [
-    { key: "gridToBuilding", label: t("analytics.consumption.gridToBuilding"), value: values.gridToBuilding },
-    { key: "gridToBattery", label: t("analytics.consumption.gridToBattery"), value: values.gridToBattery },
-    { key: "solarToBuilding", label: t("analytics.consumption.solarToBuilding"), value: values.solarToBuilding },
-    { key: "solarToBattery", label: t("analytics.consumption.solarToBattery"), value: values.solarToBattery },
-    { key: "batteryToBuilding", label: t("analytics.consumption.batteryToBuilding"), value: values.batteryToBuilding },
-    { key: "exportedToGrid", label: t("analytics.consumption.exportedToGrid"), value: values.exportedToGrid },
+  const rows: { key: string; label: string; value: number; color: string }[] = [
+    { key: "gridToBuilding", label: t("analytics.consumption.gridToBuilding"), value: values.gridToBuilding, color: "text-red-400" },
+    { key: "gridToBattery", label: t("analytics.consumption.gridToBattery"), value: values.gridToBattery, color: "text-cyan-400" },
+    { key: "solarToBuilding", label: t("analytics.consumption.solarToBuilding"), value: values.solarToBuilding, color: "text-amber-400" },
+    { key: "solarToBattery", label: t("analytics.consumption.solarToBattery"), value: values.solarToBattery, color: "text-orange-400" },
+    { key: "batteryToBuilding", label: t("analytics.consumption.batteryToBuilding"), value: values.batteryToBuilding, color: "text-emerald-400" },
+    { key: "exportedToGrid", label: t("analytics.consumption.exportedToGrid"), value: values.exportedToGrid, color: "text-fuchsia-400" },
   ];
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
       <div className="text-xs uppercase text-slate-400">{t("analytics.cumulativeConsumption")}</div>
       <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-1.5">
-        {rows.map(({ key, label, value }) => (
+        {rows.map(({ key, label, value, color }) => (
           <div key={key} className="flex justify-between items-center text-sm">
-            <span className="text-slate-400">{label}</span>
+            <span className={color}>{label}</span>
             <span className="text-slate-200">{value.toFixed(2)} kWh</span>
           </div>
         ))}
