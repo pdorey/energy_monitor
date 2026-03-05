@@ -142,20 +142,21 @@ export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSav
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-      <div className="flex justify-between items-baseline gap-4">
-        <div className="text-xs uppercase text-slate-400">{t("analytics.costSavingsToday")}</div>
-        <div className="text-xs uppercase text-slate-400">{t("analytics.costSavingsYTD")}</div>
-      </div>
-      <div className="mt-2 flex justify-between items-baseline gap-4">
+      <div className="text-xs uppercase text-slate-400">{t("analytics.costSavings")}</div>
+      <div className="mt-2 grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-1 items-baseline">
+        <div />
+        <div className="text-xs uppercase text-slate-400 text-right">{t("analytics.today")}</div>
+        <div className="text-xs uppercase text-slate-400 text-right">{t("analytics.ytd")}</div>
+        <div className="text-slate-400 text-sm">Total</div>
         <div
-          className={`text-xl sm:text-2xl font-semibold transition-all duration-300 ${
+          className={`text-xl sm:text-2xl font-semibold transition-all duration-300 text-right ${
             todayTotal >= 0 ? "text-emerald-400" : "text-red-400"
           }`}
         >
           {formatEur(todayTotal)}
         </div>
         <div
-          className={`text-xl sm:text-2xl font-semibold transition-all duration-300 ${
+          className={`text-xl sm:text-2xl font-semibold transition-all duration-300 text-right ${
             ytdTotal >= 0 ? "text-emerald-400" : "text-red-400"
           }`}
         >
@@ -165,12 +166,10 @@ export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSav
       {rows.length > 0 && (
         <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-1.5">
           {rows.map(({ key, label, today, ytd }) => (
-            <div key={key} className="flex justify-between items-center text-sm gap-4">
-              <span className="text-slate-400 shrink-0">{label}</span>
-              <div className="flex justify-end gap-4 flex-1 min-w-0">
-                <span className={`shrink-0 ${today >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(today)}</span>
-                <span className={`shrink-0 ${ytd >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(ytd)}</span>
-              </div>
+            <div key={key} className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center text-sm">
+              <span className="text-slate-400">{label}</span>
+              <span className={`text-right shrink-0 ${today >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(today)}</span>
+              <span className={`text-right shrink-0 ${ytd >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(ytd)}</span>
             </div>
           ))}
         </div>

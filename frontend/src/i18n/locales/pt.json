@@ -74,8 +74,11 @@
   },
   "analytics": {
     "cumulativeConsumption": "Consumo acumulado",
+    "costSavings": "Poupança",
     "costSavingsToday": "Poupança hoje",
     "costSavingsYTD": "Poupança ano",
+    "today": "Hoje",
+    "ytd": "Ano",
     "costSavingsNoData": "Sem dados",
     "consumption": {
       "gridToBuilding": "Rede para edifício",

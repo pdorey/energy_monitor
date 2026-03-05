@@ -71,7 +71,7 @@ export function AnalyticsCumulativeConsumptionCard({ data, currentTime }: Analyt
     { key: "solarToBuilding", label: t("analytics.consumption.solarToBuilding"), value: values.solarToBuilding, color: "text-amber-400" },
     { key: "solarToBattery", label: t("analytics.consumption.solarToBattery"), value: values.solarToBattery, color: "text-orange-400" },
     { key: "batteryToBuilding", label: t("analytics.consumption.batteryToBuilding"), value: values.batteryToBuilding, color: "text-emerald-400" },
-    { key: "exportedToGrid", label: t("analytics.consumption.exportedToGrid"), value: values.exportedToGrid, color: "text-fuchsia-400" },
+    { key: "exportedToGrid", label: t("analytics.consumption.exportedToGrid"), value: values.exportedToGrid, color: "text-violet-500" },
   ];
 
   return (
@@ -81,7 +81,7 @@ export function AnalyticsCumulativeConsumptionCard({ data, currentTime }: Analyt
         {rows.map(({ key, label, value, color }) => (
           <div key={key} className="flex justify-between items-center text-sm">
             <span className={color}>{label}</span>
-            <span className="text-slate-200">{value.toFixed(2)} kWh</span>
+            <span className={color}>{value.toFixed(2)} kWh</span>
           </div>
         ))}
       </div>

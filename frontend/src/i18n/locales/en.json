@@ -74,8 +74,11 @@
   },
   "analytics": {
     "cumulativeConsumption": "Cumulative consumption breakdown",
+    "costSavings": "Cost savings",
     "costSavingsToday": "Cost savings today",
     "costSavingsYTD": "Cost savings YTD",
+    "today": "Today",
+    "ytd": "YTD",
     "costSavingsNoData": "No data",
     "consumption": {
       "gridToBuilding": "Grid to building",
