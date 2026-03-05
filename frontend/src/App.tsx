@@ -5,6 +5,8 @@ import { useLiveData } from "./hooks/useLiveData";
 import { EnergyFlowDiagram } from "./components/EnergyFlowDiagram";
 import { AnalyticsCharts } from "./components/AnalyticsCharts";
 import { AnalyticsCostSavingsCard } from "./components/AnalyticsCostSavingsCard";
+import { AnalyticsCostSavingsCardYTD } from "./components/AnalyticsCostSavingsCardYTD";
+import { AnalyticsCumulativeConsumptionCard } from "./components/AnalyticsCumulativeConsumptionCard";
 import { PriceChart } from "./components/PriceChart";
 import { SolarForecastChart } from "./components/SolarForecastChart";
 import { EnergyProfileChart } from "./components/EnergyProfileChart";
@@ -99,6 +101,7 @@ export function App() {
   const [intradayError, setIntradayError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [dayOverride, setDayOverride] = useState<"weekday" | "saturday" | "sunday">("weekday");
+  const [costSavingsToday, setCostSavingsToday] = useState(0);
   const { snapshot, status: wsStatus } = useLiveData();
 
   const dayParams = { day_of_week: dayOverride };
@@ -448,8 +451,16 @@ export function App() {
                     currentTime={consumptionData?.time}
                   />
                 </div>
-                <div className="lg:col-span-2 space-y-4 flex flex-col items-stretch">
-                  <AnalyticsCostSavingsCard data={intradayData} currentTime={consumptionData?.time} />
+                <div className="lg:col-span-2 space-y-4 flex flex-col">
+                  <AnalyticsCumulativeConsumptionCard data={intradayData} currentTime={consumptionData?.time} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <AnalyticsCostSavingsCard
+                      data={intradayData}
+                      currentTime={consumptionData?.time}
+                      onTotalChange={setCostSavingsToday}
+                    />
+                    <AnalyticsCostSavingsCardYTD costSavingsToday={costSavingsToday} />
+                  </div>
                 </div>
               </>
             ) : (

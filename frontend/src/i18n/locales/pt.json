@@ -73,8 +73,18 @@
     "barName": "Solar (previsão)"
   },
   "analytics": {
+    "cumulativeConsumption": "Consumo acumulado",
     "costSavingsToday": "Poupança hoje",
+    "costSavingsYTD": "Poupança ano",
     "costSavingsNoData": "Sem dados",
+    "consumption": {
+      "gridToBuilding": "Rede para edifício",
+      "gridToBattery": "Rede para bateria",
+      "solarToBuilding": "Solar para edifício",
+      "solarToBattery": "Solar para bateria",
+      "batteryToBuilding": "Bateria para edifício",
+      "exportedToGrid": "Exportado para rede"
+    },
     "costSavingsTotal": "Total",
     "costSavingsSolar": "Poupança solar",
     "costSavingsPeakShaving": "Peak shaving",

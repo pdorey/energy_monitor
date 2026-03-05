@@ -73,8 +73,18 @@
     "barName": "Solar (forecast)"
   },
   "analytics": {
+    "cumulativeConsumption": "Cumulative consumption breakdown",
     "costSavingsToday": "Cost savings today",
+    "costSavingsYTD": "Cost savings YTD",
     "costSavingsNoData": "No data",
+    "consumption": {
+      "gridToBuilding": "Grid to building",
+      "gridToBattery": "Grid to battery",
+      "solarToBuilding": "Solar to building",
+      "solarToBattery": "Solar to battery",
+      "batteryToBuilding": "Battery to building",
+      "exportedToGrid": "Exported to grid"
+    },
     "costSavingsTotal": "Total",
     "costSavingsSolar": "Solar savings",
     "costSavingsPeakShaving": "Peak shaving",

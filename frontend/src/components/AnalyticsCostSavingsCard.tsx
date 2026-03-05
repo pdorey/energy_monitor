@@ -3,7 +3,7 @@
  * Decomposed into: solar savings, peak shaving, off-peak discharge, battery charge cost (grid only), export revenue.
  * Total (large) + breakdown list below, cumulative up to currentTime.
  */
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 interface IntradayPoint {
@@ -20,6 +20,7 @@ interface IntradayPoint {
 interface AnalyticsCostSavingsCardProps {
   data: IntradayPoint[];
   currentTime?: string;
+  onTotalChange?: (total: number) => void;
 }
 
 interface Breakdown {
@@ -100,9 +101,15 @@ function formatEur(value: number): string {
   return `${value >= 0 ? "" : "−"}€${Math.abs(value).toFixed(2)}`;
 }
 
-export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSavingsCardProps) {
+export function AnalyticsCostSavingsCard({ data, currentTime, onTotalChange }: AnalyticsCostSavingsCardProps) {
   const { t } = useTranslation();
   const breakdown = useMemo(() => computeBreakdown(data, currentTime), [data, currentTime]);
+
+  useEffect(() => {
+    if (onTotalChange && data && data.length >= 2) {
+      onTotalChange(breakdown.total);
+    }
+  }, [onTotalChange, breakdown.total, data]);
 
   const hasSolar = data?.some((d) => d.cumulative_solar_energy != null) ?? false;
   const hasBattery = data?.some((d) => d.cumulative_battery_energy != null) ?? false;
