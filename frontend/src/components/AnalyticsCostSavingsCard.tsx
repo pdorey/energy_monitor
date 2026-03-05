@@ -101,10 +101,13 @@ function computeBreakdown(data: IntradayPoint[], currentTime?: string): Breakdow
 }
 
 function formatEur(value: number): string {
-  return `${value >= 0 ? "" : "−"}€${Math.abs(value).toFixed(2)}`;
+  const abs = Math.abs(value);
+  const [int, dec] = abs.toFixed(2).split(".");
+  const withCommas = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${value >= 0 ? "" : "−"}€${withCommas}.${dec}`;
 }
 
-/** YTD factor: prefilled = today * factor. YTD = today * (1 + factor). */
+/** YTD factor: prefilled (Jan 1 to yesterday) = full_day_total * factor. */
 function getYtdFactor(): number {
   const D = getDayOfYear();
   if (D <= 1) return 0;
@@ -113,23 +116,25 @@ function getYtdFactor(): number {
 
 export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSavingsCardProps) {
   const { t } = useTranslation();
-  const breakdown = useMemo(() => computeBreakdown(data, currentTime), [data, currentTime]);
+  const todayBreakdown = useMemo(() => computeBreakdown(data, currentTime), [data, currentTime]);
+  const fullDayBreakdown = useMemo(() => computeBreakdown(data, undefined), [data]);
   const ytdFactor = useMemo(() => getYtdFactor(), []);
 
   const hasSolar = data?.some((d) => d.cumulative_solar_energy != null) ?? false;
   const hasBattery = data?.some((d) => d.cumulative_battery_energy != null) ?? false;
 
-  const todayTotal = breakdown.total;
-  const ytdTotal = todayTotal * (1 + ytdFactor);
+  const todayTotal = todayBreakdown.total;
+  const prefilledTotal = fullDayBreakdown.total * ytdFactor;
+  const ytdTotal = prefilledTotal + todayTotal;
 
   const rows: { key: string; label: string; today: number; ytd: number }[] = [];
-  if (hasSolar) rows.push({ key: "solar", label: t("analytics.costSavingsSolar"), today: breakdown.solar, ytd: breakdown.solar * (1 + ytdFactor) });
+  if (hasSolar) rows.push({ key: "solar", label: t("analytics.costSavingsSolar"), today: todayBreakdown.solar, ytd: fullDayBreakdown.solar * ytdFactor + todayBreakdown.solar });
   if (hasBattery) {
-    rows.push({ key: "peakShaving", label: t("analytics.costSavingsPeakShaving"), today: breakdown.peakShaving, ytd: breakdown.peakShaving * (1 + ytdFactor) });
-    rows.push({ key: "offPeakDischarge", label: t("analytics.costSavingsOffPeakDischarge"), today: breakdown.offPeakDischarge, ytd: breakdown.offPeakDischarge * (1 + ytdFactor) });
-    rows.push({ key: "batteryChargeCost", label: t("analytics.costSavingsBatteryCharge"), today: breakdown.batteryChargeCost, ytd: breakdown.batteryChargeCost * (1 + ytdFactor) });
+    rows.push({ key: "peakShaving", label: t("analytics.costSavingsPeakShaving"), today: todayBreakdown.peakShaving, ytd: fullDayBreakdown.peakShaving * ytdFactor + todayBreakdown.peakShaving });
+    rows.push({ key: "offPeakDischarge", label: t("analytics.costSavingsOffPeakDischarge"), today: todayBreakdown.offPeakDischarge, ytd: fullDayBreakdown.offPeakDischarge * ytdFactor + todayBreakdown.offPeakDischarge });
+    rows.push({ key: "batteryChargeCost", label: t("analytics.costSavingsBatteryCharge"), today: todayBreakdown.batteryChargeCost, ytd: fullDayBreakdown.batteryChargeCost * ytdFactor + todayBreakdown.batteryChargeCost });
   }
-  rows.push({ key: "exportRevenue", label: t("analytics.costSavingsExportRevenue"), today: breakdown.exportRevenue, ytd: breakdown.exportRevenue * (1 + ytdFactor) });
+  rows.push({ key: "exportRevenue", label: t("analytics.costSavingsExportRevenue"), today: todayBreakdown.exportRevenue, ytd: fullDayBreakdown.exportRevenue * ytdFactor + todayBreakdown.exportRevenue });
 
   if (!data || data.length < 2) {
     return (
@@ -142,11 +147,12 @@ export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSav
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-3 sm:p-4">
-      <div className="text-xs uppercase text-slate-400">{t("analytics.costSavings")}</div>
-      <div className="mt-2 grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-1 items-baseline">
-        <div />
+      <div className="grid grid-cols-[1fr_5rem_5rem] sm:grid-cols-[1fr_6rem_6rem] gap-x-4 items-baseline">
+        <div className="text-xs uppercase text-slate-400">{t("analytics.costSavings")}</div>
         <div className="text-xs uppercase text-slate-400 text-right">{t("analytics.today")}</div>
         <div className="text-xs uppercase text-slate-400 text-right">{t("analytics.ytd")}</div>
+      </div>
+      <div className="mt-2 grid grid-cols-[1fr_5rem_5rem] sm:grid-cols-[1fr_6rem_6rem] gap-x-4 gap-y-1 items-baseline">
         <div className="text-slate-400 text-sm">Total</div>
         <div
           className={`text-xl sm:text-2xl font-semibold transition-all duration-300 text-right ${
@@ -166,10 +172,10 @@ export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSav
       {rows.length > 0 && (
         <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-1.5">
           {rows.map(({ key, label, today, ytd }) => (
-            <div key={key} className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center text-sm">
+            <div key={key} className="grid grid-cols-[1fr_5rem_5rem] sm:grid-cols-[1fr_6rem_6rem] gap-x-4 items-center text-sm">
               <span className="text-slate-400">{label}</span>
-              <span className={`text-right shrink-0 ${today >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(today)}</span>
-              <span className={`text-right shrink-0 ${ytd >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(ytd)}</span>
+              <span className={`text-right tabular-nums ${today >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(today)}</span>
+              <span className={`text-right tabular-nums ${ytd >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(ytd)}</span>
             </div>
           ))}
         </div>
