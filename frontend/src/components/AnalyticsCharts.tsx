@@ -124,9 +124,21 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
               />
               <Tooltip content={<EnergyTooltip />} />
               <Legend wrapperStyle={{ color: "#94a3b8" }} />
-              <Bar dataKey="cumulative_grid_energy" name={t("analyticsCharts.gridEnergy")} stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="cumulative_solar_energy" name={t("analyticsCharts.solarEnergy")} stackId="a" fill="#fbbf24" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="cumulative_battery_energy" name={t("analyticsCharts.batteryEnergy")} stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+              {hasDecomposed ? (
+                <>
+                  <Bar dataKey="cumulative_grid_to_building" name={t("analyticsCharts.gridToBuilding")} stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="cumulative_solar_to_building" name={t("analyticsCharts.solarToBuilding")} stackId="a" fill="#fbbf24" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="cumulative_battery_to_building" name={t("analyticsCharts.batteryToBuilding")} stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="cumulative_grid_to_battery" name={t("analyticsCharts.gridToBattery")} stackId="a" fill="#f97316" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="cumulative_solar_to_battery" name={t("analyticsCharts.solarToBattery")} stackId="a" fill="#eab308" radius={[0, 0, 0, 0]} />
+                </>
+              ) : (
+                <>
+                  <Bar dataKey="cumulative_grid_energy" name={t("analyticsCharts.gridEnergy")} stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="cumulative_solar_energy" name={t("analyticsCharts.solarEnergy")} stackId="a" fill="#fbbf24" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="cumulative_battery_energy" name={t("analyticsCharts.batteryEnergy")} stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+                </>
+              )}
               <Line type="monotone" dataKey="cumulative_building_load" name={t("analyticsCharts.buildingLoad")} stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls={false} />
             </ComposedChart>
           </ResponsiveContainer>

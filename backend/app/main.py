@@ -316,8 +316,9 @@ async def get_intraday_analytics(day_of_week: str | None = None):
             cumulative_building += building_consumption
 
             # Decompose into grid/solar/battery flows for chart (all positive, distinguishes grid vs solar charging)
-            grid_to_building = min(grid_energy, building_consumption)
-            solar_to_building = building_consumption - grid_to_building
+            # When grid < 0 (export): grid_to_building = 0, solar supplies building first
+            grid_to_building = max(0.0, min(grid_energy, building_consumption))
+            solar_to_building = max(0.0, building_consumption - grid_to_building)
             grid_to_battery = max(0.0, grid_energy - grid_to_building)
             solar_to_battery = max(0.0, solar_prod - solar_to_building)
             battery_to_building = max(0.0, battery_energy)
