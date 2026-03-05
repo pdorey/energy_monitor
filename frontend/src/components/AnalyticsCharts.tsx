@@ -25,6 +25,11 @@ interface IntradayDataPoint {
   cumulative_solar_energy: number;
   cumulative_battery_energy: number;
   cumulative_building_load: number;
+  cumulative_grid_to_building?: number;
+  cumulative_grid_to_battery?: number;
+  cumulative_solar_to_building?: number;
+  cumulative_solar_to_battery?: number;
+  cumulative_battery_to_building?: number;
   spot_price: number;
   buy_price: number;
   export_price: number;
@@ -45,7 +50,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
     return (hours || 0) * 60 + (minutes || 0);
   };
 
-  // Cumulative Energy: progressive reveal - only show bars up to currentTime
+  // Cumulative Energy: progressive reveal - only show slots up to currentTime
   useEffect(() => {
     if (data.length === 0) {
       setEnergyData([]);
@@ -56,21 +61,12 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
       return;
     }
     const currentMinutes = timeToMinutes(currentTime);
-    const masked = data.map((d) => {
-      const pm = timeToMinutes(d.time);
-      if (pm <= currentMinutes) return d;
-      return {
-        ...d,
-        cumulative_grid_energy: 0,
-        cumulative_solar_energy: 0,
-        cumulative_battery_energy: 0,
-        cumulative_building_load: 0,
-      };
-    });
-    setEnergyData(masked);
+    const filtered = data.filter((d) => timeToMinutes(d.time) <= currentMinutes);
+    setEnergyData(filtered);
   }, [data, currentTime]);
 
   const barData = energyData.length > 0 ? energyData : data;
+  const hasDecomposed = barData.length > 0 && barData.some((d) => d.cumulative_grid_to_building != null);
 
   const EnergyTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {

@@ -284,7 +284,12 @@ async def get_intraday_analytics(day_of_week: str | None = None):
         cumulative_solar = 0.0
         cumulative_battery = 0.0
         cumulative_building = 0.0
-        
+        cumulative_grid_to_building = 0.0
+        cumulative_grid_to_battery = 0.0
+        cumulative_solar_to_building = 0.0
+        cumulative_solar_to_battery = 0.0
+        cumulative_battery_to_building = 0.0
+
         repo = get_repository()
         settings = repo.get_site_settings()
         tariff_type = settings.get("tariff_type", "three_rate")
@@ -309,7 +314,19 @@ async def get_intraday_analytics(day_of_week: str | None = None):
             cumulative_solar += solar_prod
             cumulative_battery += battery_energy
             cumulative_building += building_consumption
-            
+
+            # Decompose into grid/solar/battery flows for chart (all positive, distinguishes grid vs solar charging)
+            grid_to_building = min(grid_energy, building_consumption)
+            solar_to_building = building_consumption - grid_to_building
+            grid_to_battery = max(0.0, grid_energy - grid_to_building)
+            solar_to_battery = max(0.0, solar_prod - solar_to_building)
+            battery_to_building = max(0.0, battery_energy)
+            cumulative_grid_to_building += grid_to_building
+            cumulative_grid_to_battery += grid_to_battery
+            cumulative_solar_to_building += solar_to_building
+            cumulative_solar_to_battery += solar_to_battery
+            cumulative_battery_to_building += battery_to_building
+
             # Prices: use sim_date so compute_buy_export_prices gets correct day (grid_access for sat/sun)
             spot_price = _parse_spot_price_eur_mwh(row)
             buy_price = 0.0
@@ -338,6 +355,11 @@ async def get_intraday_analytics(day_of_week: str | None = None):
                 "cumulative_solar_energy": cumulative_solar,
                 "cumulative_battery_energy": cumulative_battery,
                 "cumulative_building_load": cumulative_building,
+                "cumulative_grid_to_building": cumulative_grid_to_building,
+                "cumulative_grid_to_battery": cumulative_grid_to_battery,
+                "cumulative_solar_to_building": cumulative_solar_to_building,
+                "cumulative_solar_to_battery": cumulative_solar_to_battery,
+                "cumulative_battery_to_building": cumulative_battery_to_building,
                 "spot_price": spot_price,
                 "buy_price": buy_price,
                 "export_price": export_price,

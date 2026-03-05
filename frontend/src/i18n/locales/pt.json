@@ -90,6 +90,11 @@
     "solarEnergy": "Energia Solar",
     "batteryEnergy": "Energia da Bateria",
     "buildingLoad": "Carga do Edifício",
+    "gridToBuilding": "Rede para edifício",
+    "gridToBattery": "Rede para bateria",
+    "solarToBuilding": "Solar para edifício",
+    "solarToBattery": "Solar para bateria",
+    "batteryToBuilding": "Bateria para edifício",
     "wholesalePrice": "Preço Mercado",
     "buyPrice": "Preço Compra",
     "exportPrice": "Preço Venda"

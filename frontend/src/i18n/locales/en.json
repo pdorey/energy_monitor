@@ -90,6 +90,11 @@
     "solarEnergy": "Solar Energy",
     "batteryEnergy": "Battery Energy",
     "buildingLoad": "Building Load",
+    "gridToBuilding": "Grid to building",
+    "gridToBattery": "Grid to battery",
+    "solarToBuilding": "Solar to building",
+    "solarToBattery": "Solar to battery",
+    "batteryToBuilding": "Battery to building",
     "wholesalePrice": "Wholesale Price",
     "buyPrice": "Buy Price",
     "exportPrice": "Export Price"
