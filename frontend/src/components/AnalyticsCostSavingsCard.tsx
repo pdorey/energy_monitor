@@ -174,7 +174,7 @@ export function AnalyticsCostSavingsCard({ data, currentTime }: AnalyticsCostSav
         <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-1">
           {rows.map(({ key, label, today, ytd }) => (
             <div key={key} className="grid grid-cols-[1fr_5rem_5rem] sm:grid-cols-[1fr_6rem_6rem] gap-x-4 items-center text-xs sm:text-sm min-w-0">
-              <span className="text-slate-400 truncate">{label}</span>
+              <span className="text-slate-400">{label}</span>
               <span className={`text-right tabular-nums shrink-0 ${today >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(today)}</span>
               <span className={`text-right tabular-nums shrink-0 ${ytd >= 0 ? "text-emerald-400" : "text-red-400"}`}>{formatEur(ytd)}</span>
             </div>

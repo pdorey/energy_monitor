@@ -97,7 +97,7 @@
   },
   "analyticsCharts": {
     "consumptionTitle": "Consumo Acumulado de Energia (24h)",
-    "priceTitle": "Evolução Diária de Preços (24h)",
+    "priceTitle": "Preços do dia",
     "energyYAxis": "Energia (kWh)",
     "priceYAxis": "Preço (€/MWh)",
     "gridEnergy": "Energia da Rede",

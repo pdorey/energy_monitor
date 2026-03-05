@@ -137,7 +137,7 @@ export function AnalyticsCharts({ data, currentTime }: AnalyticsChartsProps) {
         </div>
       </div>
 
-      {/* Chart 2: Daily Price Evolution - full data, no animation */}
+      {/* Chart 2: Today's prices - full data, no animation */}
       <div className="bg-slate-800/60 rounded-lg p-4 sm:p-6 min-w-0 overflow-hidden">
         <h3 className="text-base sm:text-lg font-semibold text-slate-300 mb-3 sm:mb-4">
           {t("analyticsCharts.priceTitle")}
